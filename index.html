@@ -279,6 +279,7 @@ input, select, button, textarea { font-family: inherit; }
 .team-card:hover { background: rgba(255,255,255,0.02); border-left-color: var(--dim); }
 .team-card.my-team { border-left-color: var(--muted); background: rgba(255,255,255,0.02); }
 .team-card-header { display: flex; justify-content: space-between; align-items: center; }
+.team-logo { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .team-name { font-size: 11px; font-weight: bold; }
 .team-budget { font-size: 12px; font-weight: bold; color: var(--green); }
 .team-meta { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); margin-top: 2px; }
@@ -1122,6 +1123,19 @@ const FLEX_POS = ['RB','WR','TE'];
 const TEAM_NAMES = [
   'Wildcard', "Tridgee's Kitties", 'Marxist Freeman', 'RB0', 'The Lich King',
   'Bear Down', 'Da HutDawgs', 'More Loaded than Tiger', 'Jack Straps', 'Bully Boys'
+];
+
+const TEAM_LOGOS = [
+  'https://i.postimg.cc/NG7fKYMr/p8q5xqdi47ry.gif',
+  'https://mystique-api.fantasy.espn.com/apis/v1/domains/lm/images/92ed5640-a7cc-11f0-9d0e-d3c969c03a65',
+  'https://mystique-api.fantasy.espn.com/apis/v1/domains/lm/images/c40e7080-7a48-11f0-b1c3-bf61c28fbeb9',
+  'https://mystique-api.fantasy.espn.com/apis/v1/domains/lm/images/c97798b0-7333-11f0-83c0-f394f484d545',
+  'https://mystique-api.fantasy.espn.com/apis/v1/domains/lm/images/ff424820-74b2-11f0-8fb1-755573069c8a',
+  'https://mystique-api.fantasy.espn.com/apis/v1/domains/lm/images/d689c890-7d13-11f0-b1c3-bf61c28fbeb9',
+  'https://mystique-api.fantasy.espn.com/apis/v1/domains/lm/images/79c8d8e0-7263-11f0-8fb1-755573069c8a',
+  'https://i.imgur.com/tQFsOay.jpg',
+  'https://i.imgflip.com/2/thj4b.jpg',
+  'https://g.espncdn.com/lm-static/logo-packs/ffl/CreepShow-ToddDetwiler/CreepShow-01.svg'
 ];
 
 const ROOKIE_PICKS = [
@@ -2001,7 +2015,8 @@ function renderLeague() {
 
     html += `<div class="team-card ${isMe ? 'my-team' : ''}" onclick="showTeamDetail(${team.id})">
       <div class="team-card-header">
-        <span class="team-name">${isMe ? '>> ' : ''}${team.name}</span>
+        <img class="team-logo" src="${TEAM_LOGOS[team.id]}" alt="">
+        <span class="team-name" style="flex:1;margin-left:6px;">${isMe ? '>> ' : ''}${team.name}</span>
         <span class="team-budget">$${team.budget}</span>
       </div>
       <div class="team-meta">
