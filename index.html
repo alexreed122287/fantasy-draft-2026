@@ -907,7 +907,7 @@ input, select, button, textarea { font-family: inherit; }
 </div>
 
 <div class="app">
-  <div class="mock-banner" id="mock-banner">MOCK DRAFT MODE <button class="mock-exit" onclick="exitMockDraft()">Exit Mock</button></div>
+  <div class="mock-banner" id="mock-banner"><span class="mock-label">MOCK DRAFT MODE</span> <button class="mock-exit" onclick="exitMockDraft()">Exit Mock</button></div>
   <!-- HEADER -->
   <div class="header">
     <h1>Draft HQ <span style="font-size:8px;color:var(--dim);vertical-align:middle;margin-left:6px;letter-spacing:1px;">HALF PPR</span></h1>
@@ -935,7 +935,10 @@ input, select, button, textarea { font-family: inherit; }
     </div>
     <div class="header-actions">
       <button class="btn btn-danger" onclick="undoLastPick()">Undo</button>
-      <button class="btn" onclick="startMockDraft()" id="mock-btn" style="background:#fef3c7;color:#92400e;border-color:#d97706;font-weight:700;">Mock</button>
+      <span id="mock-btn" style="display:inline-flex;gap:0;">
+        <button class="btn" onclick="startMockDraft(false)" style="background:#fef3c7;color:#92400e;border-color:#d97706;font-weight:700;border-radius:4px 0 0 4px;border-right:none;">Mock</button>
+        <button class="btn" onclick="startMockDraft(true)" style="background:#fde68a;color:#92400e;border-color:#d97706;font-weight:700;border-radius:0 4px 4px 0;font-size:10px;" title="Random nomination order from starter pool">Rnd</button>
+      </span>
       <button class="btn btn-warn" onclick="openSettings()">Setup</button>
       <button class="btn" onclick="openImport()">Import</button>
       <button class="btn" onclick="saveState()">Save</button>
@@ -2855,10 +2858,12 @@ function toast(msg, type = 'info') {
 // MOCK DRAFT
 // ===========================
 let mockMode = false;
+let mockRandomMode = false;
 let realState = null;
 
-function startMockDraft() {
+function startMockDraft(random) {
   if (mockMode) return;
+  mockRandomMode = !!random;
   realState = JSON.parse(JSON.stringify({
     myTeamId: state.myTeamId,
     teams: state.teams,
@@ -2874,10 +2879,12 @@ function startMockDraft() {
   state.currentNomIdx = 0;
   initTeams();
   mockMode = true;
-  document.getElementById('mock-banner').classList.add('active');
+  const banner = document.getElementById('mock-banner');
+  banner.querySelector('.mock-label').textContent = mockRandomMode ? 'MOCK DRAFT — RANDOM' : 'MOCK DRAFT — RANKED';
+  banner.classList.add('active');
   document.getElementById('mock-btn').style.display = 'none';
   renderAll();
-  toast('Mock draft started! Other teams will auto-pick.', 'success');
+  toast(mockRandomMode ? 'Random mock started! Starters nominated randomly.' : 'Mock draft started! Other teams will auto-pick.', 'success');
   mockAutoAdvance();
 }
 
@@ -2913,15 +2920,27 @@ function mockAiPick(teamId) {
   if (candidates.length === 0) candidates = avail.filter(p => 1 <= maxBid);
   if (candidates.length === 0) return null;
 
-  candidates.forEach(p => {
-    const adjVal = getAdjustedValue(p);
-    const needBonus = urgentNeed.includes(p.pos) ? 1.3 : 1;
-    const lateDiscount = slotsLeft <= 3 ? 0.7 : 1;
-    p._score = adjVal * needBonus * lateDiscount + (Math.random() * 4 - 2);
-  });
+  let pick;
+  if (mockRandomMode) {
+    const starterCap = {QB:12,RB:24,WR:24,TE:10,K:10,DST:10};
+    let pool = candidates.filter(p => p.posRank <= (starterCap[p.pos] || 12));
+    if (pool.length === 0) pool = candidates;
+    if (urgentNeed.length > 0) {
+      const needPool = pool.filter(p => urgentNeed.includes(p.pos));
+      if (needPool.length > 0) pool = needPool;
+    }
+    pick = pool[Math.floor(Math.random() * pool.length)];
+  } else {
+    candidates.forEach(p => {
+      const adjVal = getAdjustedValue(p);
+      const needBonus = urgentNeed.includes(p.pos) ? 1.3 : 1;
+      const lateDiscount = slotsLeft <= 3 ? 0.7 : 1;
+      p._score = adjVal * needBonus * lateDiscount + (Math.random() * 4 - 2);
+    });
+    candidates.sort((a, b) => b._score - a._score);
+    pick = candidates[0];
+  }
 
-  candidates.sort((a, b) => b._score - a._score);
-  const pick = candidates[0];
   const adjVal = getAdjustedValue(pick);
   const variance = Math.round((Math.random() * 0.3 - 0.1) * adjVal);
   let price = Math.max(1, Math.min(maxBid, adjVal + variance));
