@@ -506,6 +506,82 @@ input, select, button, textarea { font-family: inherit; }
 }
 .your-turn-banner.active { display: block; }
 
+/* Live Bid Tracker */
+.bid-tracker {
+  display: none;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+  align-items: center;
+  font-size: 11px;
+}
+.bid-tracker.active { display: flex; }
+.bid-tracker-player {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.bid-tracker-player .bt-name { font-weight: 600; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bid-tracker-input {
+  width: 70px;
+  padding: 4px 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 3px;
+  font-size: 13px;
+  font-weight: bold;
+  text-align: center;
+}
+.bid-tracker-input:focus { outline: none; border-color: var(--blue); }
+.bid-verdict {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.verdict-tag {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: bold;
+  text-transform: uppercase;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+.verdict-steal { background: rgba(68,170,153,0.15); color: var(--green); }
+.verdict-fair { background: rgba(91,141,191,0.12); color: var(--blue); }
+.verdict-over { background: rgba(212,160,55,0.15); color: var(--gold); }
+.verdict-stop { background: rgba(187,85,68,0.12); color: var(--red); }
+.verdict-pass { background: rgba(85,90,101,0.15); color: var(--muted); }
+.verdict-text { font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bid-tracker-close {
+  background: none;
+  border: none;
+  color: var(--dim);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+.bid-tracker-close:hover { color: var(--text); }
+.bid-meter {
+  width: 60px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.bid-meter-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width .2s, background .2s;
+}
+
 /* Wishlist */
 .wish-item {
   display: flex;
@@ -646,6 +722,14 @@ input, select, button, textarea { font-family: inherit; }
         <button class="pos-btn" onclick="toggleTargets()" id="target-toggle">Targets</button>
       </div>
     </div>
+    <div class="bid-tracker" id="bid-tracker">
+      <div class="bid-tracker-player" id="bt-player"></div>
+      <span style="color:var(--dim);">Bid:</span>
+      <input type="number" class="bid-tracker-input" id="bt-bid" min="1" max="200" value="1" oninput="updateBidTracker()">
+      <div class="bid-meter"><div class="bid-meter-fill" id="bt-meter"></div></div>
+      <div class="bid-verdict" id="bt-verdict"></div>
+      <button class="bid-tracker-close" onclick="closeBidTracker()" title="Close">&times;</button>
+    </div>
     <div class="player-table-wrap">
       <table class="player-table">
         <thead>
@@ -661,7 +745,7 @@ input, select, button, textarea { font-family: inherit; }
             <th onclick="sortBy('pts')">Pts</th>
             <th onclick="sortBy('tier')">Tier</th>
             <th>Advice</th>
-            <th style="width:60px;">Action</th>
+            <th style="width:90px;">Action</th>
           </tr>
         </thead>
         <tbody id="player-tbody"></tbody>
@@ -1820,7 +1904,7 @@ function renderBoard() {
       <td>
         ${drafted ?
           (pick ? `<span style="font-size:9px;color:var(--muted);">${state.teams[pick.teamId].name} $${pick.price}</span>` : 'GONE') :
-          `<button class="draft-btn" onclick="openDraftModal(${p.id})">Draft</button>`
+          `<span style="display:inline-flex;gap:3px;"><button class="draft-btn" onclick="openBidTracker(${p.id})" style="border-color:var(--gold);color:var(--gold);">Bid</button><button class="draft-btn" onclick="openDraftModal(${p.id})">Draft</button></span>`
         }
       </td>
     </tr>`;
@@ -2244,6 +2328,92 @@ function resetDraft() {
 }
 
 // ===========================
+// LIVE BID TRACKER
+let bidTrackerId = null;
+
+function openBidTracker(playerId) {
+  const player = PLAYERS.find(p => p.id === playerId);
+  if (!player) return;
+  bidTrackerId = playerId;
+  const adjVal = getAdjustedValue(player);
+
+  document.getElementById('bt-player').innerHTML =
+    `<span class="pos-badge pos-${player.pos}">${player.pos}</span>` +
+    `<span class="bt-name">${player.name}</span>` +
+    `<span style="color:var(--dim);font-size:10px;">${player.team}</span>`;
+  document.getElementById('bt-bid').value = adjVal;
+  document.getElementById('bid-tracker').classList.add('active');
+  document.getElementById('bt-bid').focus();
+  updateBidTracker();
+}
+
+function closeBidTracker() {
+  document.getElementById('bid-tracker').classList.remove('active');
+  bidTrackerId = null;
+}
+
+function updateBidTracker() {
+  if (!bidTrackerId) return;
+  const player = PLAYERS.find(p => p.id === bidTrackerId);
+  if (!player) return;
+
+  const bid = parseInt(document.getElementById('bt-bid').value) || 0;
+  const adjVal = getAdjustedValue(player);
+  const baseVal = player.val;
+  const myTeam = state.teams[state.myTeamId];
+  const myNeeds = getTeamNeeds(myTeam);
+  const myMaxBid = getMaxBid(myTeam);
+  const pos = player.pos;
+  const iNeed = posNeedCount(myNeeds, pos) > 0;
+  const isTarget = state.targets.has(player.id);
+  const pct = adjVal > 0 ? Math.min(100, Math.round((bid / adjVal) * 100)) : 100;
+
+  const meter = document.getElementById('bt-meter');
+  meter.style.width = Math.min(100, pct) + '%';
+
+  let tag, tagClass, text;
+
+  if (bid <= 0) {
+    tag = 'ENTER BID'; tagClass = 'verdict-pass'; text = '';
+  } else if (bid > myMaxBid && iNeed) {
+    tag = 'OVER MAX'; tagClass = 'verdict-stop'; text = `Your max is $${myMaxBid}. Let it go.`;
+  } else if (!iNeed && pos !== 'K' && pos !== 'DST') {
+    if (bid < adjVal * 0.7) {
+      tag = 'STEAL'; tagClass = 'verdict-steal'; text = `You don't need ${pos}, but this is a steal. Consider for FLEX/bench.`;
+    } else {
+      tag = 'PASS'; tagClass = 'verdict-pass'; text = `${pos} filled. Let someone else pay.`;
+    }
+  } else if (bid <= adjVal * 0.6) {
+    tag = 'STEAL'; tagClass = 'verdict-steal';
+    text = `$${adjVal - bid} under value. ${isTarget ? 'Your guy!' : 'Push to $' + Math.round(adjVal * 0.75) + ' if needed.'}`;
+    meter.style.background = 'var(--green)';
+  } else if (bid <= adjVal * 0.85) {
+    tag = 'UNDERVALUED'; tagClass = 'verdict-steal';
+    text = `Good price. Worth $${adjVal}. ${iNeed ? 'Keep bidding.' : 'Solid value.'}`;
+    meter.style.background = 'var(--green)';
+  } else if (bid <= adjVal) {
+    tag = 'FAIR VALUE'; tagClass = 'verdict-fair';
+    text = `At market value ($${adjVal}). ${isTarget ? 'Go get your guy.' : 'Last chance to bid.'}`;
+    meter.style.background = 'var(--blue)';
+  } else if (bid <= adjVal * 1.15) {
+    tag = 'SLIGHT OVERPAY'; tagClass = 'verdict-over';
+    text = `$${bid - adjVal} over value. ${player.tier <= 2 && iNeed ? 'Acceptable for elite talent.' : 'Getting risky.'}`;
+    meter.style.background = 'var(--gold)';
+  } else if (bid <= adjVal * 1.35) {
+    tag = 'OVERPAYING'; tagClass = 'verdict-over';
+    text = `$${bid - adjVal} over value. ${isTarget ? 'Only if you must have him.' : 'Let it go. Better value elsewhere.'}`;
+    meter.style.background = 'var(--warn)';
+  } else {
+    tag = 'WAY TOO MUCH'; tagClass = 'verdict-stop';
+    text = `$${bid - adjVal} over value. Walk away. You'll regret this later.`;
+    meter.style.background = 'var(--red)';
+  }
+
+  document.getElementById('bt-verdict').innerHTML =
+    `<span class="verdict-tag ${tagClass}">${tag}</span>` +
+    `<span class="verdict-text">${text}</span>`;
+}
+
 // COLLAPSIBLE SECTIONS
 function toggleSection(header) {
   header.classList.toggle('collapsed');
