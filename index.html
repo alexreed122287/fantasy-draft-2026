@@ -547,7 +547,7 @@ input, select, button, textarea { font-family: inherit; }
 
   <!-- LEFT: MY TEAM -->
   <div class="my-team-panel" id="my-team-panel">
-    <div class="panel-title">My Team</div>
+    <div class="panel-title">Wildcard</div>
     <div id="my-roster"></div>
     <div class="needs-section">
       <div class="panel-title" style="margin-top:8px;">Needs</div>
@@ -826,7 +826,19 @@ const PLAYERS = [
   {id:188,name:"Eagles",team:"PHI",pos:"DST",bye:5,pts:115,val:1,tier:5},
   {id:189,name:"Chiefs",team:"KC",pos:"DST",bye:6,pts:112,val:1,tier:5},
   {id:190,name:"Chargers",team:"LAC",pos:"DST",bye:5,pts:110,val:1,tier:5},
-  {id:191,name:"Bears",team:"CHI",pos:"DST",bye:7,pts:108,val:1,tier:5}
+  {id:191,name:"Bears",team:"CHI",pos:"DST",bye:7,pts:108,val:1,tier:5},
+
+  // --- ROOKIES (pre-drafted, not auctioned) ---
+  {id:200,name:"Jeremiah Love",team:"TBD",pos:"RB",bye:0,pts:130,val:1,tier:5},
+  {id:201,name:"Kenyon Sadiq",team:"TBD",pos:"TE",bye:0,pts:105,val:1,tier:5},
+  {id:202,name:"Jadarian Price",team:"TBD",pos:"RB",bye:0,pts:120,val:1,tier:5},
+  {id:203,name:"Makai Lemon",team:"TBD",pos:"WR",bye:0,pts:115,val:1,tier:5},
+  {id:204,name:"Fernando Mendoza",team:"TBD",pos:"QB",bye:0,pts:200,val:1,tier:5},
+  {id:205,name:"Carnell Tate",team:"TBD",pos:"WR",bye:0,pts:110,val:1,tier:5},
+  {id:206,name:"Roman Hemby",team:"TBD",pos:"RB",bye:0,pts:125,val:1,tier:5},
+  {id:207,name:"Omar Cooper Jr.",team:"TBD",pos:"WR",bye:0,pts:108,val:1,tier:5},
+  {id:208,name:"Mike Washington Jr.",team:"TBD",pos:"WR",bye:0,pts:105,val:1,tier:5},
+  {id:209,name:"Jordyn Tyson",team:"TBD",pos:"WR",bye:0,pts:112,val:1,tier:5}
 ];
 
 // ===========================
@@ -837,6 +849,24 @@ const TOTAL_SLOTS = 15;
 const BUDGET = 200;
 const NUM_TEAMS = 10;
 const FLEX_POS = ['RB','WR','TE'];
+
+const TEAM_NAMES = [
+  'Wildcard', "Tridgee's Kitties", 'Marxist Freeman', 'RB0', 'The Lich King',
+  'Bear Down', 'Da HutDawgs', 'More Loaded than Tiger', 'Jack Straps', 'Bully Boys'
+];
+
+const ROOKIE_PICKS = [
+  {teamId:0, playerId:200},
+  {teamId:1, playerId:201},
+  {teamId:2, playerId:202},
+  {teamId:3, playerId:203},
+  {teamId:4, playerId:204},
+  {teamId:5, playerId:205},
+  {teamId:6, playerId:206},
+  {teamId:7, playerId:207},
+  {teamId:8, playerId:208},
+  {teamId:9, playerId:209}
+];
 
 let state = {
   myTeamId: 0,
@@ -859,11 +889,22 @@ function initTeams() {
   for (let i = 0; i < NUM_TEAMS; i++) {
     state.teams.push({
       id: i,
-      name: i === 0 ? 'My Team' : `Team ${i+1}`,
+      name: TEAM_NAMES[i],
       budget: BUDGET,
       players: []
     });
   }
+  applyRookiePicks();
+}
+
+function applyRookiePicks() {
+  ROOKIE_PICKS.forEach(rp => {
+    const team = state.teams[rp.teamId];
+    const player = PLAYERS.find(p => p.id === rp.playerId);
+    if (!player || team.players.some(tp => tp.player.id === player.id)) return;
+    team.players.push({player, price: 0});
+    state.picks.push({player, price: 0, teamId: rp.teamId, pickNumber: -1, rookie: true});
+  });
 }
 
 function getTeamRoster(team) {
@@ -1980,12 +2021,12 @@ function autoSave() {
 
 function resetDraft() {
   if (!confirm('Reset entire draft? This cannot be undone.')) return;
-  initTeams();
   state.picks = [];
   state.pickNumber = 0;
   state.currentNomIdx = 0;
   state.targets = new Set();
   state.avoids = new Set();
+  initTeams();
   localStorage.removeItem('ff-auction-2026');
   renderAll();
   toast('Draft reset', 'warn');
@@ -2036,6 +2077,7 @@ function init() {
       state.nominationOrder = data.nominationOrder;
       state.currentNomIdx = data.currentNomIdx;
       state.pickNumber = data.pickNumber;
+      state.teams.forEach((t, i) => t.name = TEAM_NAMES[i]);
     } catch(e) {
       initTeams();
     }
