@@ -6,22 +6,24 @@
 <title>Auction Draft Command Center 2026</title>
 <style>
 :root {
-  --bg: #08080e;
-  --surface: #111118;
-  --card: #191922;
-  --border: #2a2a3a;
-  --accent: #00d4aa;
-  --accent2: #00b894;
-  --warn: #ff6b35;
-  --danger: #ff3366;
-  --gold: #ffd700;
-  --blue: #4dabf7;
-  --purple: #b197fc;
-  --text: #e0e0e8;
-  --muted: #777790;
-  --dim: #444458;
-  --green: #00d68f;
-  --red: #ff5c5c;
+  --bg: #0b1526;
+  --surface: #12203a;
+  --card: #182c4e;
+  --border: #243b5e;
+  --accent: #d50a0a;
+  --accent2: #b80808;
+  --warn: #f7a91e;
+  --danger: #d50a0a;
+  --gold: #f7a91e;
+  --blue: #3ea8ff;
+  --purple: #8f7ff7;
+  --text: #e8edf5;
+  --muted: #7a8ba8;
+  --dim: #3d5278;
+  --green: #2ecc71;
+  --red: #e74c3c;
+  --espn-red: #d50a0a;
+  --espn-navy: #0b1526;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: var(--bg); color: var(--text); height:100vh; overflow:hidden; }
@@ -49,7 +51,8 @@ input, select, button, textarea { font-family: inherit; }
   gap: 16px;
   border-bottom: 1px solid var(--border);
 }
-.header h1 { font-size: 14px; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; white-space: nowrap; }
+.header { border-bottom: 3px solid var(--espn-red); }
+.header h1 { font-size: 14px; color: #fff; letter-spacing: 2px; text-transform: uppercase; white-space: nowrap; }
 .header-stats { display: flex; gap: 20px; flex: 1; justify-content: center; }
 .stat { text-align: center; }
 .stat-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
@@ -59,8 +62,8 @@ input, select, button, textarea { font-family: inherit; }
 .stat-value.round { color: var(--warn); }
 .header-actions { display: flex; gap: 6px; }
 .btn { padding: 6px 12px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; border-radius: 4px; font-size: 11px; transition: all .15s; }
-.btn:hover { border-color: var(--accent); color: var(--accent); }
-.btn-accent { background: var(--accent); color: #000; border-color: var(--accent); font-weight: bold; }
+.btn:hover { border-color: var(--blue); color: var(--blue); }
+.btn-accent { background: var(--espn-red); color: #fff; border-color: var(--espn-red); font-weight: bold; }
 .btn-accent:hover { background: var(--accent2); }
 .btn-danger { border-color: var(--danger); color: var(--danger); }
 .btn-danger:hover { background: var(--danger); color: #fff; }
@@ -76,12 +79,13 @@ input, select, button, textarea { font-family: inherit; }
 }
 .panel-title {
   font-size: 11px;
-  color: var(--accent);
+  color: #fff;
   letter-spacing: 2px;
   text-transform: uppercase;
   margin-bottom: 8px;
   padding-bottom: 4px;
   border-bottom: 1px solid var(--border);
+  font-weight: bold;
 }
 .roster-slot {
   display: flex;
@@ -94,7 +98,7 @@ input, select, button, textarea { font-family: inherit; }
   gap: 6px;
   min-height: 30px;
 }
-.roster-slot.filled { border-left: 3px solid var(--accent); }
+.roster-slot.filled { border-left: 3px solid var(--blue); }
 .roster-slot.empty { border-left: 3px solid var(--dim); opacity: 0.6; }
 .roster-slot.need { border-left: 3px solid var(--warn); opacity: 1; }
 .slot-pos { font-weight: bold; color: var(--muted); min-width: 32px; font-size: 10px; }
@@ -154,11 +158,11 @@ input, select, button, textarea { font-family: inherit; }
   border-radius: 4px;
   font-size: 12px;
 }
-.search-box:focus { outline: none; border-color: var(--accent); }
+.search-box:focus { outline: none; border-color: var(--blue); }
 .pos-filters { display: flex; gap: 3px; }
 .pos-btn { padding: 4px 10px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; border-radius: 3px; font-size: 10px; font-weight: bold; }
-.pos-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
-.pos-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+.pos-btn.active { background: var(--espn-red); color: #fff; border-color: var(--espn-red); }
+.pos-btn:hover:not(.active) { border-color: var(--blue); color: var(--blue); }
 .sort-btns { display: flex; gap: 3px; }
 .view-toggle { display: flex; gap: 3px; margin-left: auto; }
 
@@ -187,13 +191,13 @@ input, select, button, textarea { font-family: inherit; }
   user-select: none;
   z-index: 2;
 }
-.player-table th:hover { color: var(--accent); }
-.player-table th.sorted { color: var(--accent); }
+.player-table th:hover { color: var(--blue); }
+.player-table th.sorted { color: var(--blue); }
 .player-table td { padding: 5px 8px; border-bottom: 1px solid rgba(42,42,58,0.3); }
 .player-table tr { transition: background .1s; }
-.player-table tr:hover { background: rgba(0,212,170,0.05); }
+.player-table tr:hover { background: rgba(62,168,255,0.08); }
 .player-table tr.drafted { opacity: 0.3; text-decoration: line-through; }
-.player-table tr.drafted-mine { opacity: 1; text-decoration: none; background: rgba(0,212,170,0.08); }
+.player-table tr.drafted-mine { opacity: 1; text-decoration: none; background: rgba(213,10,10,0.08); }
 .player-table tr.target { background: rgba(255,215,0,0.06); }
 .player-table tr.avoid { background: rgba(255,51,102,0.06); }
 
@@ -237,14 +241,14 @@ input, select, button, textarea { font-family: inherit; }
 .draft-btn {
   padding: 2px 8px;
   background: transparent;
-  border: 1px solid var(--accent);
-  color: var(--accent);
+  border: 1px solid var(--blue);
+  color: var(--blue);
   cursor: pointer;
   border-radius: 3px;
   font-size: 9px;
   font-weight: bold;
 }
-.draft-btn:hover { background: var(--accent); color: #000; }
+.draft-btn:hover { background: var(--blue); color: #fff; }
 .mark-btn {
   padding: 1px 4px;
   background: transparent;
@@ -271,8 +275,8 @@ input, select, button, textarea { font-family: inherit; }
   border-left: 3px solid var(--dim);
   transition: all .15s;
 }
-.team-card:hover { border-left-color: var(--accent); }
-.team-card.my-team { border-left-color: var(--accent); background: rgba(0,212,170,0.05); }
+.team-card:hover { border-left-color: var(--blue); }
+.team-card.my-team { border-left-color: var(--espn-red); background: rgba(213,10,10,0.08); }
 .team-card-header { display: flex; justify-content: space-between; align-items: center; }
 .team-name { font-size: 11px; font-weight: bold; }
 .team-budget { font-size: 12px; font-weight: bold; color: var(--green); }
@@ -357,7 +361,7 @@ input, select, button, textarea { font-family: inherit; }
   cursor: pointer;
   transition: all .15s;
 }
-.nom-card:hover { border-left-color: var(--accent); background: rgba(255,255,255,0.03); }
+.nom-card:hover { border-left-color: var(--blue); background: rgba(62,168,255,0.05); }
 .nom-card.bait-card { border-left-color: var(--danger); }
 .nom-card.bid-card { border-left-color: var(--green); }
 .nom-card.chaos-card { border-left-color: var(--purple); }
@@ -420,7 +424,7 @@ input, select, button, textarea { font-family: inherit; }
   max-height: 80vh;
   overflow-y: auto;
 }
-.modal h2 { font-size: 14px; color: var(--accent); margin-bottom: 12px; }
+.modal h2 { font-size: 14px; color: #fff; margin-bottom: 12px; border-bottom: 2px solid var(--espn-red); padding-bottom: 8px; }
 .modal-field { margin-bottom: 10px; }
 .modal-field label { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
 .modal-field input, .modal-field select {
@@ -432,7 +436,7 @@ input, select, button, textarea { font-family: inherit; }
   border-radius: 4px;
   font-size: 13px;
 }
-.modal-field input:focus, .modal-field select:focus { outline: none; border-color: var(--accent); }
+.modal-field input:focus, .modal-field select:focus { outline: none; border-color: var(--blue); }
 .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
 .modal-actions .btn { flex: 1; padding: 10px; font-size: 12px; }
 
@@ -447,7 +451,7 @@ input, select, button, textarea { font-family: inherit; }
 }
 .modal-player-name { font-size: 16px; font-weight: bold; }
 .modal-player-meta { font-size: 11px; color: var(--muted); }
-.modal-player-val { font-size: 14px; color: var(--accent); font-weight: bold; }
+.modal-player-val { font-size: 14px; color: var(--blue); font-weight: bold; }
 
 .whatif-box {
   margin-top: 10px;
@@ -457,7 +461,7 @@ input, select, button, textarea { font-family: inherit; }
   font-size: 10px;
 }
 .whatif-box .label { color: var(--muted); }
-.whatif-box .value { color: var(--accent); font-weight: bold; }
+.whatif-box .value { color: var(--blue); font-weight: bold; }
 
 /* SETTINGS MODAL */
 .settings-grid {
@@ -479,7 +483,7 @@ input, select, button, textarea { font-family: inherit; }
 .toast {
   padding: 8px 16px;
   background: var(--card);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--blue);
   border-radius: 6px;
   margin-bottom: 6px;
   font-size: 11px;
@@ -501,6 +505,28 @@ input, select, button, textarea { font-family: inherit; }
 }
 .your-turn-banner.active { display: block; }
 
+/* Collapsible sections */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  padding: 6px 0;
+  margin-bottom: 6px;
+  border-bottom: 2px solid var(--accent);
+}
+.section-header:hover { opacity: 0.85; }
+.section-header .panel-title { margin: 0; padding: 0; border: none; }
+.section-toggle {
+  font-size: 10px;
+  color: var(--muted);
+  transition: transform .2s;
+}
+.section-header.collapsed .section-toggle { transform: rotate(-90deg); }
+.section-body { transition: max-height .25s ease; overflow: hidden; }
+.section-body.collapsed { max-height: 0 !important; overflow: hidden; }
+
 /* Responsive */
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr auto auto; }
@@ -513,7 +539,7 @@ input, select, button, textarea { font-family: inherit; }
 <div class="app">
   <!-- HEADER -->
   <div class="header">
-    <h1>Draft HQ <span style="font-size:10px;color:var(--warn);vertical-align:middle;margin-left:6px;">HALF PPR</span></h1>
+    <h1>Draft HQ <span style="font-size:9px;background:var(--espn-red);color:#fff;padding:2px 6px;border-radius:3px;vertical-align:middle;margin-left:6px;">HALF PPR</span></h1>
     <div class="header-stats">
       <div class="stat">
         <div class="stat-label">My Budget</div>
@@ -548,18 +574,31 @@ input, select, button, textarea { font-family: inherit; }
 
   <!-- LEFT: MY TEAM -->
   <div class="my-team-panel" id="my-team-panel">
-    <div class="panel-title">Wildcard</div>
-    <div id="my-roster"></div>
-    <div class="needs-section">
-      <div class="panel-title" style="margin-top:8px;">Needs</div>
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="panel-title">Wildcard</div>
+      <span class="section-toggle">&#9660;</span>
+    </div>
+    <div class="section-body" id="roster-body">
+      <div id="my-roster"></div>
+    </div>
+
+    <div class="section-header" onclick="toggleSection(this)" style="margin-top:8px;">
+      <div class="panel-title">Needs</div>
+      <span class="section-toggle">&#9660;</span>
+    </div>
+    <div class="section-body" id="needs-body">
       <div id="my-needs"></div>
     </div>
-    <div class="budget-bar">
-      <div class="panel-title" style="margin-top:8px;">Budget</div>
+
+    <div class="section-header" onclick="toggleSection(this)" style="margin-top:8px;">
+      <div class="panel-title">Budget</div>
+      <span class="section-toggle">&#9660;</span>
+    </div>
+    <div class="section-body" id="budget-body">
       <div class="budget-breakdown" id="budget-breakdown"></div>
       <div class="budget-visual" id="budget-visual"></div>
+      <div class="strategy-box" id="allocation-advice"></div>
     </div>
-    <div class="strategy-box" id="allocation-advice"></div>
   </div>
 
   <!-- CENTER: PLAYER BOARD -->
@@ -605,12 +644,24 @@ input, select, button, textarea { font-family: inherit; }
 
   <!-- RIGHT: LEAGUE -->
   <div class="league-panel" id="league-panel">
-    <div class="panel-title">League</div>
-    <div id="league-teams"></div>
-    <div class="inflation-box" id="inflation-box">
-      <div class="inflation-label">Market Inflation</div>
-      <div class="inflation-value" id="inflation-value">1.00x</div>
-      <div class="inflation-desc" id="inflation-desc">Neutral - draft just started</div>
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="panel-title">League</div>
+      <span class="section-toggle">&#9660;</span>
+    </div>
+    <div class="section-body" id="league-body">
+      <div id="league-teams"></div>
+    </div>
+
+    <div class="section-header" onclick="toggleSection(this)" style="margin-top:8px;">
+      <div class="panel-title">Market</div>
+      <span class="section-toggle">&#9660;</span>
+    </div>
+    <div class="section-body" id="market-body">
+      <div class="inflation-box" id="inflation-box">
+        <div class="inflation-label">Market Inflation</div>
+        <div class="inflation-value" id="inflation-value">1.00x</div>
+        <div class="inflation-desc" id="inflation-desc">Neutral - draft just started</div>
+      </div>
     </div>
   </div>
 
@@ -1495,7 +1546,7 @@ function updateWhatIf() {
     <div style="display:flex;gap:20px;">
       <div><span class="label">After: </span><span class="value">$${budgetAfter}</span> left</div>
       <div><span class="label">Slots: </span><span class="value">${slotsAfter}</span></div>
-      <div><span class="label">$/Slot: </span><span class="value" style="color:${perSlotAfter < 5 ? 'var(--danger)' : 'var(--accent)'}">$${perSlotAfter}</span></div>
+      <div><span class="label">$/Slot: </span><span class="value" style="color:${perSlotAfter < 5 ? 'var(--danger)' : 'var(--blue)'}">$${perSlotAfter}</span></div>
       <div><span class="label">Max Bid: </span><span class="value">$${maxBidAfter}</span></div>
     </div>
   `;
@@ -1571,7 +1622,7 @@ function renderHeader() {
 
   const perSlot = getPerSlot(myTeam);
   const psEl = document.getElementById('hdr-perslot');
-  psEl.style.color = perSlot < 5 ? 'var(--danger)' : perSlot < 15 ? 'var(--warn)' : 'var(--accent)';
+  psEl.style.color = perSlot < 5 ? 'var(--danger)' : perSlot < 15 ? 'var(--warn)' : 'var(--blue)';
 }
 
 function renderMyTeam() {
@@ -1751,13 +1802,13 @@ function renderLeague() {
   const infDescEl = document.getElementById('inflation-desc');
   infEl.textContent = `${inf.toFixed(2)}x`;
   if (state.pickNumber === 0) {
-    infEl.style.color = 'var(--accent)';
+    infEl.style.color = 'var(--blue)';
     infDescEl.textContent = 'Draft starting. Adj values = expected prices.';
   } else if (inf > 1.15) {
     infEl.style.color = 'var(--danger)';
     infDescEl.textContent = 'Inflation: money flooding the market. Let others overpay.';
   } else if (inf > 0.9) {
-    infEl.style.color = 'var(--accent)';
+    infEl.style.color = 'var(--blue)';
     infDescEl.textContent = 'Neutral market. Fair prices available.';
   } else {
     infEl.style.color = 'var(--green)';
@@ -1794,7 +1845,7 @@ function renderStrategy() {
         <span class="strat-tag tag-${s.type}">${s.tag}</span>
         <span class="pos-badge pos-${s.player.pos}" style="font-size:8px;">${s.player.pos}</span>
         <span style="font-weight:bold;font-size:11px;">${s.player.name}</span>
-        <span style="color:var(--accent);font-size:11px;font-weight:bold;">$${getAdjustedValue(s.player)}</span>
+        <span style="color:var(--blue);font-size:11px;font-weight:bold;">$${getAdjustedValue(s.player)}</span>
         <span class="nom-action ${s.actionClass}" style="margin-left:auto;">${s.action}</span>
       </div>
       <div class="nom-reason">${s.reason}</div>
@@ -1869,7 +1920,7 @@ function renderStrategy() {
       html += `<div class="strat-item" onclick="openDraftModal(${p.id})" style="${canAfford ? '' : 'opacity:0.4;'}">
         <span class="pos-badge pos-${p.pos}" style="font-size:8px;">${p.pos}</span>
         <span style="font-size:10px;">${p.name}</span>
-        <span style="color:var(--accent);font-size:10px;font-weight:bold;">$${p.adjVal}</span>
+        <span style="color:var(--blue);font-size:10px;font-weight:bold;">$${p.adjVal}</span>
         ${!canAfford ? '<span style="color:var(--danger);font-size:8px;">over budget</span>' : ''}
       </div>`;
     });
@@ -2135,6 +2186,13 @@ function resetDraft() {
 }
 
 // ===========================
+// COLLAPSIBLE SECTIONS
+function toggleSection(header) {
+  header.classList.toggle('collapsed');
+  const body = header.nextElementSibling;
+  body.classList.toggle('collapsed');
+}
+
 // TOAST
 // ===========================
 function toast(msg, type = 'info') {
