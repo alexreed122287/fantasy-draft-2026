@@ -231,21 +231,19 @@ input, select, button, textarea { font-family: inherit; }
 .val-down { color: var(--red); }
 .val-neutral { color: var(--muted); }
 
-.tier-badge {
+.pos-rank {
   display: inline-block;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  text-align: center;
-  line-height: 16px;
-  font-size: 8px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 9px;
   font-weight: bold;
+  white-space: nowrap;
 }
-.tier-1 { background: var(--gold); color: #000; }
-.tier-2 { background: #aaa; color: #000; }
-.tier-3 { background: #cd7f32; color: #000; }
-.tier-4 { background: var(--dim); color: var(--text); }
-.tier-5 { background: transparent; color: var(--dim); }
+.pos-rank-elite { background: #dcfce7; color: #166534; }
+.pos-rank-starter { background: #dbeafe; color: #1e40af; }
+.pos-rank-mid { background: #fef9c3; color: #854d0e; }
+.pos-rank-deep { background: #fee2e2; color: #991b1b; }
+.ovr-rank { font-size: 10px; color: var(--muted); font-weight: 600; }
 
 .draft-btn {
   padding: 2px 8px;
@@ -976,15 +974,15 @@ input, select, button, textarea { font-family: inherit; }
         <thead>
           <tr>
             <th style="width:20px;"></th>
-            <th onclick="sortBy('rank')" id="th-rank" class="sorted">RK</th>
+            <th onclick="sortBy('rank')" id="th-rank" class="sorted">OVR</th>
             <th onclick="sortBy('name')">Player</th>
             <th onclick="sortBy('pos')">Pos</th>
+            <th onclick="sortBy('posRank')">Pos Rk</th>
             <th onclick="sortBy('team')">Team</th>
             <th onclick="sortBy('bye')">Bye</th>
             <th onclick="sortBy('val')" id="th-val">Value</th>
             <th onclick="sortBy('adj')" id="th-adj">Adj $</th>
             <th onclick="sortBy('pts')">Pts</th>
-            <th onclick="sortBy('tier')">Tier</th>
             <th>Advice</th>
             <th style="width:90px;">Action</th>
           </tr>
@@ -2092,6 +2090,25 @@ function renderMyTeam() {
   `;
 }
 
+function computePositionRanks() {
+  const byPos = {};
+  [...PLAYERS].sort((a, b) => b.val - a.val).forEach(p => {
+    if (!byPos[p.pos]) byPos[p.pos] = 0;
+    byPos[p.pos]++;
+    p.posRank = byPos[p.pos];
+  });
+}
+computePositionRanks();
+
+function posRankClass(pos, rank) {
+  const elite = {QB:6,RB:12,WR:12,TE:5,K:5,DST:5};
+  const starter = {QB:12,RB:24,WR:24,TE:10,K:10,DST:10};
+  if (rank <= (elite[pos]||5)) return 'pos-rank-elite';
+  if (rank <= (starter[pos]||12)) return 'pos-rank-starter';
+  if (rank <= (starter[pos]||12) * 1.5) return 'pos-rank-mid';
+  return 'pos-rank-deep';
+}
+
 function renderBoard() {
   const search = document.getElementById('search').value.toLowerCase();
   const tbody = document.getElementById('player-tbody');
@@ -2119,7 +2136,7 @@ function renderBoard() {
       case 'val': return (b.val - a.val) * sd;
       case 'adj': return (getAdjustedValue(b) - getAdjustedValue(a)) * sd;
       case 'pts': return (b.pts - a.pts) * sd;
-      case 'tier': return (a.tier - b.tier) * sd || (b.val - a.val);
+      case 'posRank': return (a.posRank - b.posRank) * sd || a.pos.localeCompare(b.pos);
       default: return (b.val - a.val) * sd;
     }
   });
@@ -2148,15 +2165,15 @@ function renderBoard() {
           ${isTarget ? '&#9733;' : '&#9734;'}
         </button>
       </td>
-      <td style="color:var(--dim);">${idx + 1}</td>
+      <td class="ovr-rank">${idx + 1}</td>
       <td style="font-weight:bold;">${p.name}</td>
       <td><span class="pos-badge pos-${p.pos}">${p.pos}</span></td>
+      <td><span class="pos-rank ${posRankClass(p.pos, p.posRank)}">${p.pos}${p.posRank}</span></td>
       <td style="color:var(--muted);">${p.team}</td>
       <td style="color:var(--dim);">${p.bye}</td>
       <td class="val-cell">$${p.val}</td>
       <td class="val-cell ${valClass}">$${adjVal}</td>
       <td style="color:var(--muted);">${p.pts}</td>
-      <td><span class="tier-badge tier-${p.tier}">${p.tier}</span></td>
       <td>${(() => {
         if (drafted) return '';
         const adv = getPlayerAdvice(p);
