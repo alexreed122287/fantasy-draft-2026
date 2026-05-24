@@ -513,7 +513,7 @@ input, select, button, textarea { font-family: inherit; }
 <div class="app">
   <!-- HEADER -->
   <div class="header">
-    <h1>Draft HQ</h1>
+    <h1>Draft HQ <span style="font-size:10px;color:var(--warn);vertical-align:middle;margin-left:6px;">HALF PPR</span></h1>
     <div class="header-stats">
       <div class="stat">
         <div class="stat-label">My Budget</div>
@@ -539,6 +539,7 @@ input, select, button, textarea { font-family: inherit; }
     <div class="header-actions">
       <button class="btn btn-danger" onclick="undoLastPick()">Undo</button>
       <button class="btn btn-warn" onclick="openSettings()">Setup</button>
+      <button class="btn" onclick="openImport()">Import</button>
       <button class="btn" onclick="saveState()">Save</button>
       <button class="btn" onclick="loadState()">Load</button>
       <button class="btn" onclick="resetDraft()">Reset</button>
@@ -668,6 +669,36 @@ input, select, button, textarea { font-family: inherit; }
     <div id="team-detail-content"></div>
     <div class="modal-actions">
       <button class="btn btn-accent" onclick="closeTeamDetail()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-overlay" id="import-modal">
+  <div class="modal" style="min-width:550px;max-height:85vh;overflow-y:auto;">
+    <h2>Import Half-PPR Rankings</h2>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.5;">
+      Paste CSV or tab-separated data from FantasyPros, Beer Sheets, or any source.<br>
+      Format: <b>Name, Team, Pos, Points, AuctionValue</b> (one player per line).<br>
+      Existing players matched by name get updated. New names are added. Unmatched stay as-is.
+    </div>
+    <div class="modal-field">
+      <label>Paste Rankings Data</label>
+      <textarea id="import-data" rows="14" style="width:100%;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:8px;font-size:11px;font-family:monospace;resize:vertical;"
+        placeholder="Bijan Robinson,ATL,RB,310,72&#10;Ja'Marr Chase,CIN,WR,295,68&#10;CeeDee Lamb,DAL,WR,288,62&#10;..."></textarea>
+    </div>
+    <div class="modal-field">
+      <label>Delimiter</label>
+      <select id="import-delim" style="width:120px;">
+        <option value="auto">Auto-detect</option>
+        <option value=",">Comma</option>
+        <option value="&#9;">Tab</option>
+      </select>
+    </div>
+    <div id="import-preview" style="font-size:10px;color:var(--muted);margin-top:8px;"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeImport()">Cancel</button>
+      <button class="btn btn-accent" onclick="runImport()">Import & Update</button>
     </div>
   </div>
 </div>
@@ -1015,11 +1046,11 @@ function calcDraftGrade(team) {
 function calcPosBalance(team) {
   const r = getTeamRoster(team);
   let score = 1;
-  if (r.QB.length >= 1) score += 0.1;
-  if (r.RB.length >= 2) score += 0.15;
-  if (r.WR.length >= 2) score += 0.15;
+  if (r.QB.length >= 1) score += 0.08;
+  if (r.RB.length >= 2) score += 0.18;
+  if (r.WR.length >= 2) score += 0.18;
   if (r.TE.length >= 1) score += 0.1;
-  if (r.FLEX.length >= 1) score += 0.05;
+  if (r.FLEX.length >= 1) score += 0.06;
   if (r.K.length >= 1) score += 0.02;
   if (r.DST.length >= 1) score += 0.02;
   return Math.min(1.5, score);
@@ -1338,15 +1369,16 @@ function getPlayerAdvice(player) {
     return {text:`MAX $${max}`, css:'advice-maybe', tip:`${pos} getting scarce. Bid up to $${max}.`};
   }
 
-  // HIGH PRIORITY: RB/WR
+  // HIGH PRIORITY: RB/WR (half PPR: WRs and pass-catching RBs get premium)
   if (isHighPri) {
+    const pprBonus = (pos === 'WR') ? 2 : 0;
     if (player.tier <= 1) {
-      const max = Math.min(adjVal + 5, myMaxBid);
-      return {text:`BID $${max}`, css:'advice-bid', tip:`Elite ${pos}. Push hard to $${max}. Build your core.`};
+      const max = Math.min(adjVal + 5 + pprBonus, myMaxBid);
+      return {text:`BID $${max}`, css:'advice-bid', tip:`Elite ${pos}. Push hard to $${max}. ${pos === 'WR' ? 'Half PPR premium.' : 'Build your core.'}`};
     }
     if (player.tier === 2) {
-      const max = Math.min(adjVal + 3, myMaxBid);
-      return {text:`BID $${max}`, css:'advice-bid', tip:`Strong ${pos} starter. Solid value up to $${max}.`};
+      const max = Math.min(adjVal + 3 + pprBonus, myMaxBid);
+      return {text:`BID $${max}`, css:'advice-bid', tip:`Strong ${pos} starter. Solid value up to $${max}.${pos === 'WR' ? ' Half PPR boost.' : ''}`};
     }
     if (player.tier === 3) {
       const max = Math.min(adjVal, myMaxBid);
@@ -1382,7 +1414,7 @@ function getAllocationAdvice() {
   const phase = getDraftPhase();
   let advice = `$${budget} left, ${slotsLeft} slots. `;
   if (slotsLeft === TOTAL_SLOTS) {
-    advice += "STARS & SCRUBS: Blow $55-65 on 2 elite RB/WR. $25-35 on 2 more starters. $1-5 on the rest. Nominate expensive QBs/TEs early to drain opponents.";
+    advice += "HALF PPR STARS & SCRUBS: Blow $55-65 on 2 elite RB/WR (target pass-catching RBs). $25-35 on 2 more starters. $1-5 on the rest. WRs hold extra value in half PPR. Nominate expensive QBs/TEs early to drain opponents.";
   } else if (phase === 'early') {
     advice += `Spendable: $${spendable}. Keep nominating BAIT. Don't panic-buy yet unless elite talent falls to you below value.`;
   } else if (phase === 'mid' && spendable > 40) {
@@ -1965,6 +1997,76 @@ function applySettings() {
   renderAll();
   autoSave();
   toast('Settings applied', 'success');
+}
+
+// ===========================
+// IMPORT RANKINGS
+// ===========================
+function openImport() {
+  document.getElementById('import-modal').classList.add('active');
+  document.getElementById('import-data').value = '';
+  document.getElementById('import-preview').innerHTML = '';
+}
+function closeImport() {
+  document.getElementById('import-modal').classList.remove('active');
+}
+
+function runImport() {
+  const raw = document.getElementById('import-data').value.trim();
+  if (!raw) { toast('No data to import', 'warn'); return; }
+
+  const delimSel = document.getElementById('import-delim').value;
+  const lines = raw.split('\n').map(l => l.trim()).filter(l => l);
+
+  let updated = 0, added = 0, skipped = 0;
+  let nextId = Math.max(...PLAYERS.map(p => p.id)) + 1;
+
+  lines.forEach(line => {
+    let delim = delimSel;
+    if (delim === 'auto') delim = line.includes('\t') ? '\t' : ',';
+    const parts = line.split(delim).map(s => s.trim().replace(/^["']|["']$/g, ''));
+    if (parts.length < 5) { skipped++; return; }
+
+    const [name, team, pos, ptsRaw, valRaw] = parts;
+    const pts = parseInt(ptsRaw);
+    const val = parseInt(valRaw);
+    if (!name || !pos || isNaN(pts) || isNaN(val)) { skipped++; return; }
+    if (!['QB','RB','WR','TE','K','DST'].includes(pos.toUpperCase())) { skipped++; return; }
+
+    const existing = PLAYERS.find(p => p.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      existing.team = team.toUpperCase() || existing.team;
+      existing.pos = pos.toUpperCase();
+      existing.pts = pts;
+      existing.val = Math.max(1, val);
+      updated++;
+    } else {
+      PLAYERS.push({
+        id: nextId++,
+        name,
+        team: team.toUpperCase(),
+        pos: pos.toUpperCase(),
+        bye: 0,
+        pts,
+        val: Math.max(1, val),
+        tier: val >= 40 ? 1 : val >= 20 ? 2 : val >= 10 ? 3 : val >= 4 ? 4 : 5
+      });
+      added++;
+    }
+  });
+
+  // Re-tier all players by position after import
+  ['QB','RB','WR','TE','K','DST'].forEach(pos => {
+    const group = PLAYERS.filter(p => p.pos === pos).sort((a,b) => b.val - a.val);
+    group.forEach((p, i) => {
+      const pct = i / Math.max(1, group.length);
+      p.tier = pct < 0.1 ? 1 : pct < 0.25 ? 2 : pct < 0.45 ? 3 : pct < 0.7 ? 4 : 5;
+    });
+  });
+
+  closeImport();
+  renderAll();
+  toast(`Imported: ${updated} updated, ${added} added, ${skipped} skipped`, 'success');
 }
 
 // ===========================
