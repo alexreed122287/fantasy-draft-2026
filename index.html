@@ -310,13 +310,14 @@ input, select, button, textarea { font-family: inherit; }
   grid-column: 1 / -1;
   background: var(--surface);
   padding: 8px 16px;
-  border-top: 1px solid var(--border);
+  border-top: 2px solid var(--border);
   display: flex;
-  gap: 16px;
+  gap: 12px;
   align-items: flex-start;
-  max-height: 140px;
+  max-height: 220px;
   overflow-y: auto;
 }
+.strategy-bar.my-turn { border-top: 2px solid var(--gold); }
 .strat-section { flex: 1; min-width: 200px; }
 .strat-title { font-size: 9px; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
 .strat-item {
@@ -336,12 +337,53 @@ input, select, button, textarea { font-family: inherit; }
   font-size: 8px;
   font-weight: bold;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 .tag-drain { background: var(--danger); color: #fff; }
+.tag-bait { background: var(--danger); color: #fff; }
+.tag-bid { background: var(--green); color: #000; }
 .tag-target { background: var(--green); color: #000; }
 .tag-chaos { background: var(--purple); color: #000; }
 .tag-value { background: var(--blue); color: #000; }
 .tag-run { background: var(--warn); color: #000; }
+.tag-snipe { background: var(--gold); color: #000; }
+
+.nom-card {
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  background: var(--card);
+  border-radius: 4px;
+  border-left: 3px solid var(--dim);
+  cursor: pointer;
+  transition: all .15s;
+}
+.nom-card:hover { border-left-color: var(--accent); background: rgba(255,255,255,0.03); }
+.nom-card.bait-card { border-left-color: var(--danger); }
+.nom-card.bid-card { border-left-color: var(--green); }
+.nom-card.chaos-card { border-left-color: var(--purple); }
+.nom-card.run-card { border-left-color: var(--warn); }
+.nom-card.snipe-card { border-left-color: var(--gold); }
+.nom-header { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+.nom-action { font-size: 9px; font-weight: bold; padding: 1px 6px; border-radius: 2px; }
+.action-nobid { background: rgba(255,51,102,0.15); color: var(--danger); }
+.action-bid { background: rgba(0,214,143,0.15); color: var(--green); }
+.action-snipe { background: rgba(255,215,0,0.15); color: var(--gold); }
+.nom-reason { font-size: 9px; color: var(--muted); line-height: 1.4; }
+.nom-targets { font-size: 8px; color: var(--dim); margin-top: 1px; }
+
+.intel-card {
+  padding: 4px 6px;
+  margin-bottom: 3px;
+  background: var(--card);
+  border-radius: 3px;
+  font-size: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.intel-flush { border-left: 2px solid var(--green); }
+.intel-desperate { border-left: 2px solid var(--warn); }
+.intel-broke { border-left: 2px solid var(--danger); }
 
 /* MODALS */
 .modal-overlay {
@@ -930,104 +972,261 @@ function calcPosBalance(team) {
 // ===========================
 // NOMINATION STRATEGY ENGINE
 // ===========================
+
+function getDraftPhase() {
+  const pct = state.pickNumber / (NUM_TEAMS * TOTAL_SLOTS);
+  if (pct < 0.15) return 'early';
+  if (pct < 0.45) return 'mid';
+  if (pct < 0.75) return 'late';
+  return 'endgame';
+}
+
+function posNeedCount(needs, pos) {
+  if (pos === 'QB') return needs.QB;
+  if (pos === 'RB') return needs.RB + (FLEX_POS.includes(pos) ? Math.min(needs.FLEX, 1) : 0);
+  if (pos === 'WR') return needs.WR + (FLEX_POS.includes(pos) ? Math.min(needs.FLEX, 1) : 0);
+  if (pos === 'TE') return needs.TE + (FLEX_POS.includes(pos) ? Math.min(needs.FLEX, 1) : 0);
+  if (pos === 'K') return needs.K;
+  if (pos === 'DST') return needs.DST;
+  return 0;
+}
+
+function getOpponentIntel() {
+  const opponents = state.teams.filter(t => t.id !== state.myTeamId);
+  return opponents.map(t => {
+    const needs = getTeamNeeds(t);
+    const slotsLeft = TOTAL_SLOTS - t.players.length;
+    const perSlot = getPerSlot(t);
+    const maxBid = getMaxBid(t);
+    const starterNeeds = needs.QB + needs.RB + needs.WR + needs.TE + needs.FLEX;
+    return {
+      team: t, needs, slotsLeft, perSlot, maxBid, starterNeeds,
+      isFlush: perSlot > 18,
+      isBroke: perSlot < 5,
+      isDesperate: starterNeeds >= 4 && slotsLeft <= 8
+    };
+  }).sort((a, b) => b.team.budget - a.team.budget);
+}
+
+function findRivalries(oppIntel) {
+  const rivalries = {};
+  ['QB','RB','WR','TE'].forEach(pos => {
+    const needy = oppIntel.filter(o => posNeedCount(o.needs, pos) > 0 && o.team.budget > 20);
+    if (needy.length >= 2) {
+      rivalries[pos] = {
+        count: needy.length,
+        flushCount: needy.filter(o => o.isFlush).length,
+        teams: needy.map(o => o.team.name).slice(0, 4),
+        totalBudget: needy.reduce((s, o) => s + o.team.budget, 0)
+      };
+    }
+  });
+  return rivalries;
+}
+
 function getNominationSuggestions() {
   const avail = getAvailablePlayers();
   const myTeam = state.teams[state.myTeamId];
   const myNeeds = getTeamNeeds(myTeam);
   const myMaxBid = getMaxBid(myTeam);
-  const inf = calcInflation();
+  const myPerSlot = getPerSlot(myTeam);
+  const phase = getDraftPhase();
+  const oppIntel = getOpponentIntel();
+  const rivalries = findRivalries(oppIntel);
   const suggestions = [];
 
-  const opponents = state.teams.filter(t => t.id !== state.myTeamId);
-  const oppNeedMap = {};
-  opponents.forEach(t => { oppNeedMap[t.id] = getTeamNeeds(t); });
+  const iNeedPos = (pos) => posNeedCount(myNeeds, pos) > 0;
+  const recentPicks = state.picks.slice(-5);
+
+  // Stars & Scrubs priority: RB/WR are HIGH priority, QB/TE are LOW (fill late for cheap)
+  const isHighPriority = (pos) => (pos === 'RB' || pos === 'WR') && iNeedPos(pos);
+  const isLowPriority = (pos) => pos === 'QB' || pos === 'TE' || pos === 'K' || pos === 'DST';
+  // "Baitable" = I can safely let this go — either I don't need it, or it's a low-priority position I plan to fill later
+  const isBaitable = (pos) => !iNeedPos(pos) || (isLowPriority(pos) && phase !== 'endgame');
 
   avail.forEach(player => {
     const adjVal = getAdjustedValue(player);
     const pos = player.pos;
+    const iNeed = iNeedPos(pos);
 
-    let oppDemand = 0;
-    opponents.forEach(t => {
-      const needs = oppNeedMap[t.id];
-      if (pos === 'QB' && needs.QB > 0) oppDemand++;
-      else if (pos === 'RB' && (needs.RB > 0 || needs.FLEX > 0)) oppDemand++;
-      else if (pos === 'WR' && (needs.WR > 0 || needs.FLEX > 0)) oppDemand++;
-      else if (pos === 'TE' && (needs.TE > 0 || needs.FLEX > 0)) oppDemand++;
-      else if (pos === 'K' && needs.K > 0) oppDemand++;
-      else if (pos === 'DST' && needs.DST > 0) oppDemand++;
-    });
+    const oppCanAfford = oppIntel.filter(o => posNeedCount(o.needs, pos) > 0 && o.maxBid >= adjVal);
+    const oppNeedButBroke = oppIntel.filter(o => posNeedCount(o.needs, pos) > 0 && o.maxBid < adjVal);
+    const flushNeeders = oppIntel.filter(o => posNeedCount(o.needs, pos) > 0 && o.isFlush);
+    const rivalry = rivalries[pos];
 
-    const iNeed = (pos === 'QB' && myNeeds.QB > 0) ||
-                  (pos === 'RB' && (myNeeds.RB > 0 || myNeeds.FLEX > 0)) ||
-                  (pos === 'WR' && (myNeeds.WR > 0 || myNeeds.FLEX > 0)) ||
-                  (pos === 'TE' && (myNeeds.TE > 0 || myNeeds.FLEX > 0)) ||
-                  (pos === 'K' && myNeeds.K > 0) ||
-                  (pos === 'DST' && myNeeds.DST > 0);
+    // =====================
+    // BAIT: Nominate to drain opponents. DO NOT BID.
+    // Key insight: QB/TE are always baitable under Stars & Scrubs
+    // because you plan to fill them late for $5-10.
+    // =====================
 
-    const hype = player.tier <= 2 ? 2 : player.tier <= 3 ? 1.5 : 1;
-
-    // DRAIN: high value, I DON'T need, opponents DO need
-    if (!iNeed && oppDemand >= 3 && adjVal >= 15) {
+    // Elite QB/TE bait — the #1 auction trap. People overpay 30-50% on these.
+    if ((pos === 'QB' || pos === 'TE') && isBaitable(pos) && player.tier <= 2 && adjVal >= 15) {
+      const targets = flushNeeders.length ? flushNeeders.map(o => o.team.name) : oppCanAfford.slice(0, 4).map(o => o.team.name);
       suggestions.push({
-        player, type: 'drain', tag: 'DRAIN',
-        reason: `${oppDemand} teams need ${pos} - force a bidding war`,
-        score: oppDemand * hype * adjVal * 0.5
+        player, type: 'bait', tag: 'BAIT', cssClass: 'bait-card',
+        action: 'DO NOT BID',
+        actionClass: 'action-nobid',
+        reason: `${pos === 'QB' ? 'Everyone wants a QB1. League-winning QBs can be had for $5-10 later.' : 'TE is the thinnest position — scarcity triggers panic bidding.'} ${oppCanAfford.length} teams will fight. Let them burn $${Math.round(adjVal * 1.3)}+.`,
+        targetTeams: targets.length ? `Drains: ${targets.join(', ')}` : '',
+        score: adjVal * (player.tier === 1 ? 5 : 3) * Math.max(oppCanAfford.length, 3)
       });
     }
 
-    // OVERRATED: QB/TE that opponents will overpay for (name value > actual value)
-    if ((pos === 'QB' || pos === 'TE') && !iNeed && adjVal >= 10 && player.tier <= 2) {
+    // Position rivalry bait — 3+ flush teams need this position, throw gas on the fire
+    if (isBaitable(pos) && rivalry && rivalry.count >= 3 && player.tier <= 3 && adjVal >= 10) {
       suggestions.push({
-        player, type: 'drain', tag: 'DRAIN',
-        reason: `Elite ${pos} hype - opponents will overbid`,
-        score: adjVal * hype * 3
+        player, type: 'bait', tag: 'BAIT', cssClass: 'bait-card',
+        action: 'DO NOT BID',
+        actionClass: 'action-nobid',
+        reason: `${rivalry.count} teams all need ${pos}. Nominate to force a bidding war. Winner overpays by $10-20, losers get desperate for the next ${pos}.`,
+        targetTeams: `War between: ${rivalry.teams.join(', ')}`,
+        score: rivalry.count * adjVal * 1.2 + (rivalry.flushCount * 15)
       });
     }
 
-    // VALUE TARGET: I need, opponents are cash-strapped, good adjusted value
-    if (iNeed && adjVal <= myMaxBid) {
-      const cashStrapped = opponents.filter(t => getPerSlot(t) < adjVal * 0.8).length;
-      if (cashStrapped >= 3 || adjVal <= 5) {
+    // Name-value trap — big name players that casual managers overpay for on reputation
+    if (isBaitable(pos) && player.tier >= 3 && adjVal >= 8 && oppCanAfford.length >= 3 &&
+        (player.name.includes('Henry') || player.name.includes('Hill') || player.name.includes('Adams') ||
+         player.name.includes('Mahomes') || player.name.includes('Evans') || player.name.includes('Kittle') ||
+         player.name.includes('Prescott') || player.name.includes('Andrews'))) {
+      suggestions.push({
+        player, type: 'bait', tag: 'BAIT', cssClass: 'bait-card',
+        action: 'DO NOT BID',
+        actionClass: 'action-nobid',
+        reason: `Brand name > production. Casuals see the jersey, not the stats. Someone will overpay $5-15 for the name alone.`,
+        targetTeams: `${oppCanAfford.length} teams can afford to overbid`,
+        score: adjVal * 3
+      });
+    }
+
+    // =====================
+    // BID: Nominate because YOU want this player.
+    // Only for HIGH priority needs (RB/WR) or late-draft fills.
+    // =====================
+
+    // Stealth bid — few opponents can compete for this player
+    if (iNeed && adjVal <= myMaxBid && adjVal >= 3) {
+      const competitorCount = oppCanAfford.length;
+      const ceiling = Math.min(adjVal + 5, myMaxBid);
+
+      // Early draft: only suggest BID for top-tier RB/WR that are your core targets
+      // Mid/late: expand to more positions and players
+      const earlyBidOk = isHighPriority(pos) && player.tier <= 2;
+      const midBidOk = isHighPriority(pos) && player.tier <= 3;
+      const lateBidOk = iNeed;
+      const phaseBidOk = (phase === 'early' && earlyBidOk) || (phase === 'mid' && midBidOk) ||
+                          ((phase === 'late' || phase === 'endgame') && lateBidOk);
+
+      // Score by scarcity: fewer competitors = better opportunity
+      if (phaseBidOk && (competitorCount <= 4 || phase === 'late' || phase === 'endgame')) {
+        const brokeTeams = oppNeedButBroke.length;
+        let reason;
+        if (competitorCount <= 1) reason = `Almost no competition. You should win this easily at $${Math.max(adjVal - 5, 1)}-${adjVal}.`;
+        else if (competitorCount <= 3) reason = `Only ${competitorCount} real competitors. ${brokeTeams} teams need ${pos} but can't afford it. Bid confidently.`;
+        else reason = `${competitorCount} competitors but you have budget. Push to $${ceiling} max — don't chase past that.`;
+
         suggestions.push({
-          player, type: 'target', tag: 'TARGET',
-          reason: `${cashStrapped} teams can't afford to outbid you`,
-          score: (adjVal / Math.max(1, player.val)) * 100 + (iNeed ? 50 : 0)
+          player, type: 'bid', tag: 'BID', cssClass: 'bid-card',
+          action: `BID up to $${ceiling}`,
+          actionClass: 'action-bid',
+          reason,
+          targetTeams: competitorCount ? `Competition: ${oppCanAfford.slice(0, 3).map(o => o.team.name + ' ($' + o.maxBid + ')').join(', ')}` : 'No competition',
+          score: adjVal * (player.tier <= 2 ? 3 : 1.5) * Math.max(1, 6 - competitorCount) + (isHighPriority(pos) ? 30 : 0)
         });
       }
     }
 
-    // POSITIONAL RUN: if a top player at a position was just taken, nominate #2
-    if (state.picks.length > 0) {
-      const lastPick = state.picks[state.picks.length - 1];
-      if (lastPick.player.pos === pos && lastPick.player.tier <= 2 && player.tier <= 2 && !iNeed) {
+    // Value snipe — adjusted value significantly above base, opponents may underestimate
+    if (iNeed && adjVal > player.val + 3 && adjVal <= myMaxBid && player.val >= 5 && isHighPriority(pos)) {
+      suggestions.push({
+        player, type: 'snipe', tag: 'SNIPE', cssClass: 'snipe-card',
+        action: `SNIPE under $${player.val + Math.round((adjVal - player.val) * 0.5)}`,
+        actionClass: 'action-snipe',
+        reason: `Adj value $${adjVal} but the board says $${player.val}. Other managers price off the board — you can steal this player for $${player.val}-${player.val + Math.round((adjVal - player.val) * 0.4)}.`,
+        targetTeams: '',
+        score: (adjVal - player.val) * 6 + (isHighPriority(pos) ? 30 : 0)
+      });
+    }
+
+    // Late-draft need fill
+    if (iNeed && (phase === 'late' || phase === 'endgame') && adjVal <= 5 && pos !== 'K' && pos !== 'DST') {
+      suggestions.push({
+        player, type: 'bid', tag: 'BID', cssClass: 'bid-card',
+        action: `BID $${Math.max(1, adjVal)}`,
+        actionClass: 'action-bid',
+        reason: `Fill your ${pos} slot for cheap. Bargain bin price.`,
+        targetTeams: '',
+        score: 25 + (iNeed ? 15 : 0)
+      });
+    }
+
+    // =====================
+    // RUN: Trigger positional panic after a top player is taken
+    // =====================
+    if (recentPicks.length > 0) {
+      const posJustTaken = recentPicks.filter(pk => pk.player.pos === pos && pk.player.tier <= 2);
+      if (posJustTaken.length > 0 && player.tier <= 3 && isBaitable(pos) && adjVal >= 10) {
+        const lastGuy = posJustTaken[posJustTaken.length - 1];
+        const remaining = avail.filter(p => p.pos === pos && p.tier <= 3).length;
         suggestions.push({
-          player, type: 'run', tag: 'RUN',
-          reason: `${lastPick.player.name} just went - trigger ${pos} panic`,
-          score: adjVal * 4
+          player, type: 'run', tag: 'RUN', cssClass: 'run-card',
+          action: 'DO NOT BID',
+          actionClass: 'action-nobid',
+          reason: `${lastGuy.player.name} just went for $${lastGuy.price}. Only ${remaining} startable ${pos}s remain. Opponents will panic and overbid by $10-20.`,
+          targetTeams: rivalry ? `Panicking: ${rivalry.teams.join(', ')}` : '',
+          score: adjVal * 3.5 + (remaining < 8 ? 30 : 0)
         });
       }
     }
 
-    // CHAOS: nominate K/DST early
-    if ((pos === 'K' || pos === 'DST') && state.pickNumber < 40 && !iNeed) {
+    // =====================
+    // CHAOS: Disrupt draft rhythm
+    // =====================
+    if ((pos === 'K' || pos === 'DST') && state.pickNumber < 50) {
       suggestions.push({
-        player, type: 'chaos', tag: 'CHAOS',
-        reason: `Early ${pos} nomination - waste time, confuse opponents`,
-        score: 30 - state.pickNumber * 0.5
+        player, type: 'chaos', tag: 'CHAOS', cssClass: 'chaos-card',
+        action: 'DO NOT BID',
+        actionClass: 'action-nobid',
+        reason: `${state.pickNumber < 5 ? 'First-pick power move. ' : ''}Nominate a ${pos} to break rhythm. Someone burns $1-2 and a roster spot on a ${pos} way too early.`,
+        targetTeams: '',
+        score: (state.pickNumber < 5 ? 40 : 15) - state.pickNumber * 0.2
       });
     }
   });
 
-  // Sort by score and deduplicate
+  // Score bonus: boost BAIT in early/mid, boost BID in late/endgame
+  suggestions.forEach(s => {
+    if (phase === 'early' && s.type === 'bait') s.score *= 1.5;
+    if (phase === 'mid' && s.type === 'bait') s.score *= 1.2;
+    if (phase === 'late' && s.type === 'bid') s.score *= 1.4;
+    if (phase === 'endgame' && s.type === 'bid') s.score *= 1.6;
+    if (state.targets.has(s.player.id) && s.type === 'bid') s.score *= 1.3;
+  });
+
   suggestions.sort((a, b) => b.score - a.score);
+
+  // Ensure type diversity: max 3 of any type in top results, always include 1 chaos if available
   const seen = new Set();
+  const typeCounts = {};
   const unique = [];
+  const chaosBackup = suggestions.find(s => s.type === 'chaos' && !seen.has(s.player.id));
+
   for (const s of suggestions) {
-    if (!seen.has(s.player.id) && unique.length < 8) {
-      seen.add(s.player.id);
-      unique.push(s);
-    }
+    if (seen.has(s.player.id)) continue;
+    const tc = typeCounts[s.type] || 0;
+    if (tc >= 3) continue;
+    seen.add(s.player.id);
+    typeCounts[s.type] = tc + 1;
+    unique.push(s);
+    if (unique.length >= 9) break;
   }
+
+  // Guarantee one CHAOS if available and not already included
+  if (!typeCounts['chaos'] && chaosBackup && unique.length < 10) {
+    unique.push(chaosBackup);
+  }
+
   return unique;
 }
 
@@ -1051,15 +1250,20 @@ function getAllocationAdvice() {
   const reservedForMinBids = (benchLeft + needs.K + needs.DST) * 1;
   const spendable = budget - reservedForMinBids - (mustFill - needs.K - needs.DST);
 
-  let advice = `$${budget} left for ${slotsLeft} slots. `;
+  const phase = getDraftPhase();
+  let advice = `$${budget} left, ${slotsLeft} slots. `;
   if (slotsLeft === TOTAL_SLOTS) {
-    advice += "Stars & Scrubs: spend $55-65 on 2 elite RB/WR, $25-35 on 2 more starters, $1-5 on the rest.";
-  } else if (spendable > 50 && mustFill <= 4) {
-    advice += `$${spendable} spendable on ${mustFill} key spots. Go get a stud.`;
+    advice += "STARS & SCRUBS: Blow $55-65 on 2 elite RB/WR. $25-35 on 2 more starters. $1-5 on the rest. Nominate expensive QBs/TEs early to drain opponents.";
+  } else if (phase === 'early') {
+    advice += `Spendable: $${spendable}. Keep nominating BAIT. Don't panic-buy yet unless elite talent falls to you below value.`;
+  } else if (phase === 'mid' && spendable > 40) {
+    advice += `$${spendable} to burn on ${mustFill} key spots. Start targeting YOUR guys now while you have budget advantage.`;
   } else if (spendable < 10 && mustFill > 2) {
-    advice += "Budget tight. Fill needs at $1-3 per slot. Look for sleepers.";
+    advice += "Budget critical. Fill every remaining need at $1-3. No more luxuries.";
+  } else if (phase === 'late' || phase === 'endgame') {
+    advice += `Bargain bin time. ~$${Math.floor(spendable / Math.max(1, mustFill))} per remaining spot. Grab value wherever you can.`;
   } else {
-    advice += `~$${Math.floor(spendable / Math.max(1, mustFill - needs.K - needs.DST))} per starter spot.`;
+    advice += `~$${Math.floor(spendable / Math.max(1, mustFill - needs.K - needs.DST))} per starter spot remaining.`;
   }
   return advice;
 }
@@ -1401,60 +1605,108 @@ function renderStrategy() {
   const isMyTurn = nomTeamId === state.myTeamId;
   const suggestions = getNominationSuggestions();
   const myNeeds = getTeamNeeds(state.teams[state.myTeamId]);
+  const oppIntel = getOpponentIntel();
+  const phase = getDraftPhase();
 
+  bar.classList.toggle('my-turn', isMyTurn);
   let html = '';
 
-  // Nomination suggestions
-  html += `<div class="strat-section">
-    <div class="strat-title">${isMyTurn ? 'YOUR NOMINATION - PICK ONE' : 'Next Nomination Ideas'}</div>`;
+  // === COLUMN 1: NOMINATION SUGGESTIONS ===
+  const phaseLabel = phase === 'early' ? 'EARLY - DRAIN BUDGETS' :
+                     phase === 'mid' ? 'MID - MIX BAIT & BIDS' :
+                     phase === 'late' ? 'LATE - TARGET YOUR GUYS' : 'ENDGAME - FILL ROSTER';
+  html += `<div class="strat-section" style="flex:1.5;min-width:300px;">
+    <div class="strat-title">${isMyTurn ? 'YOUR TURN - NOMINATE' : 'Nomination Ideas'} <span style="color:var(--muted);font-size:8px;margin-left:8px;">${phaseLabel}</span></div>`;
+
   if (suggestions.length === 0) {
-    html += '<div style="font-size:10px;color:var(--muted);">No suggestions yet</div>';
+    html += '<div style="font-size:10px;color:var(--muted);padding:4px;">Draft more players to generate suggestions.</div>';
   }
+
   suggestions.slice(0, 5).forEach(s => {
-    const tagClass = s.type === 'drain' ? 'tag-drain' : s.type === 'target' ? 'tag-target' :
-                     s.type === 'chaos' ? 'tag-chaos' : s.type === 'run' ? 'tag-run' : 'tag-value';
-    html += `<div class="strat-item" onclick="openDraftModal(${s.player.id})">
-      <span class="strat-tag ${tagClass}">${s.tag}</span>
-      <span style="font-weight:bold;">${s.player.name}</span>
-      <span style="color:var(--muted);">$${getAdjustedValue(s.player)}</span>
-      <span style="color:var(--dim);font-size:9px;">${s.reason}</span>
+    html += `<div class="nom-card ${s.cssClass}" onclick="openDraftModal(${s.player.id})">
+      <div class="nom-header">
+        <span class="strat-tag tag-${s.type}">${s.tag}</span>
+        <span class="pos-badge pos-${s.player.pos}" style="font-size:8px;">${s.player.pos}</span>
+        <span style="font-weight:bold;font-size:11px;">${s.player.name}</span>
+        <span style="color:var(--accent);font-size:11px;font-weight:bold;">$${getAdjustedValue(s.player)}</span>
+        <span class="nom-action ${s.actionClass}" style="margin-left:auto;">${s.action}</span>
+      </div>
+      <div class="nom-reason">${s.reason}</div>
+      ${s.targetTeams ? `<div class="nom-targets">${s.targetTeams}</div>` : ''}
     </div>`;
   });
   html += '</div>';
 
-  // Best available by need
-  html += `<div class="strat-section"><div class="strat-title">Best Available by Need</div>`;
-  const needPositions = ['RB','WR','QB','TE'].filter(p => {
+  // === COLUMN 2: OPPONENT INTEL ===
+  html += `<div class="strat-section" style="flex:0.8;min-width:200px;">
+    <div class="strat-title">Opponent Intel</div>`;
+
+  const flush = oppIntel.filter(o => o.isFlush);
+  const broke = oppIntel.filter(o => o.isBroke);
+  const desperate = oppIntel.filter(o => o.isDesperate);
+
+  if (flush.length > 0) {
+    html += '<div style="font-size:8px;color:var(--green);text-transform:uppercase;margin:4px 0 2px;">Flush (drain these)</div>';
+    flush.slice(0, 3).forEach(o => {
+      const topNeed = ['QB','RB','WR','TE'].filter(p => posNeedCount(o.needs, p) > 0).join('/');
+      html += `<div class="intel-card intel-flush">
+        <span>${o.team.name}</span>
+        <span style="color:var(--green);font-weight:bold;">$${o.team.budget}</span>
+        <span style="color:var(--muted);font-size:9px;">needs ${topNeed || 'BN'}</span>
+      </div>`;
+    });
+  }
+
+  if (broke.length > 0) {
+    html += '<div style="font-size:8px;color:var(--danger);text-transform:uppercase;margin:4px 0 2px;">Broke (exploit)</div>';
+    broke.slice(0, 3).forEach(o => {
+      html += `<div class="intel-card intel-broke">
+        <span>${o.team.name}</span>
+        <span style="color:var(--danger);font-weight:bold;">$${o.team.budget}</span>
+        <span style="color:var(--muted);font-size:9px;">${o.slotsLeft} slots, $${o.perSlot}/ea</span>
+      </div>`;
+    });
+  }
+
+  if (desperate.length > 0) {
+    html += '<div style="font-size:8px;color:var(--warn);text-transform:uppercase;margin:4px 0 2px;">Desperate (need starters)</div>';
+    desperate.slice(0, 3).forEach(o => {
+      const topNeed = ['QB','RB','WR','TE'].filter(p => posNeedCount(o.needs, p) > 0).join('/');
+      html += `<div class="intel-card intel-desperate">
+        <span>${o.team.name}</span>
+        <span style="color:var(--warn);">${o.starterNeeds} starters needed</span>
+        <span style="color:var(--muted);font-size:9px;">${topNeed}</span>
+      </div>`;
+    });
+  }
+
+  if (flush.length === 0 && broke.length === 0 && desperate.length === 0) {
+    html += '<div style="font-size:10px;color:var(--muted);padding:4px;">All teams at neutral budget levels.</div>';
+  }
+  html += '</div>';
+
+  // === COLUMN 3: BEST AVAILABLE BY NEED ===
+  html += `<div class="strat-section" style="flex:0.8;min-width:180px;">
+    <div class="strat-title">Best Available (My Needs)</div>`;
+  const needPositions = ['RB','WR','TE','QB'].filter(p => {
     if (p === 'QB') return myNeeds.QB > 0;
     if (p === 'TE') return myNeeds.TE > 0;
     return myNeeds[p] > 0 || myNeeds.FLEX > 0;
   });
   if (needPositions.length === 0) needPositions.push('RB','WR');
+
   needPositions.forEach(pos => {
-    const best = getBestAvailable(pos).slice(0, 2);
+    const best = getBestAvailable(pos).slice(0, 3);
+    html += `<div style="font-size:8px;color:var(--muted);text-transform:uppercase;margin:4px 0 2px;">${pos} (${myNeeds[pos] || 0} needed)</div>`;
     best.forEach(p => {
-      html += `<div class="strat-item" onclick="openDraftModal(${p.id})">
+      const canAfford = p.adjVal <= getMaxBid(state.teams[state.myTeamId]);
+      html += `<div class="strat-item" onclick="openDraftModal(${p.id})" style="${canAfford ? '' : 'opacity:0.4;'}">
         <span class="pos-badge pos-${p.pos}" style="font-size:8px;">${p.pos}</span>
-        <span>${p.name}</span>
-        <span style="color:var(--accent);">$${p.adjVal}</span>
+        <span style="font-size:10px;">${p.name}</span>
+        <span style="color:var(--accent);font-size:10px;font-weight:bold;">$${p.adjVal}</span>
+        ${!canAfford ? '<span style="color:var(--danger);font-size:8px;">over budget</span>' : ''}
       </div>`;
     });
-  });
-  html += '</div>';
-
-  // Value picks (biggest discount from base)
-  html += `<div class="strat-section"><div class="strat-title">Value Picks (Adj &gt; Base)</div>`;
-  const valuePicks = getAvailablePlayers()
-    .map(p => ({...p, adjVal: getAdjustedValue(p), diff: getAdjustedValue(p) - p.val}))
-    .filter(p => p.diff > 0 && p.val > 1)
-    .sort((a, b) => b.diff - a.diff)
-    .slice(0, 5);
-  valuePicks.forEach(p => {
-    html += `<div class="strat-item" onclick="openDraftModal(${p.id})">
-      <span class="strat-tag tag-value">+$${p.diff}</span>
-      <span>${p.name}</span>
-      <span style="color:var(--muted);">base $${p.val} adj $${p.adjVal}</span>
-    </div>`;
   });
   html += '</div>';
 
