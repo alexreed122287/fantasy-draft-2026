@@ -385,6 +385,20 @@ input, select, button, textarea { font-family: inherit; }
 .intel-desperate { border-left: 2px solid var(--warn); }
 .intel-broke { border-left: 2px solid var(--danger); }
 
+.advice-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: bold;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.advice-bid { background: rgba(0,214,143,0.2); color: var(--green); border: 1px solid rgba(0,214,143,0.3); }
+.advice-pass { background: rgba(255,51,102,0.12); color: var(--danger); border: 1px solid rgba(255,51,102,0.2); }
+.advice-wait { background: rgba(255,215,0,0.15); color: var(--gold); border: 1px solid rgba(255,215,0,0.25); }
+.advice-maybe { background: rgba(75,171,247,0.15); color: var(--blue); border: 1px solid rgba(75,171,247,0.25); }
+
 /* MODALS */
 .modal-overlay {
   display: none;
@@ -579,6 +593,7 @@ input, select, button, textarea { font-family: inherit; }
             <th onclick="sortBy('adj')" id="th-adj">Adj $</th>
             <th onclick="sortBy('pts')">Pts</th>
             <th onclick="sortBy('tier')">Tier</th>
+            <th>Advice</th>
             <th style="width:60px;">Action</th>
           </tr>
         </thead>
@@ -1238,6 +1253,79 @@ function getBestAvailable(pos) {
   return filtered.slice(0, 10);
 }
 
+function getPlayerAdvice(player) {
+  const myTeam = state.teams[state.myTeamId];
+  const myNeeds = getTeamNeeds(myTeam);
+  const myMaxBid = getMaxBid(myTeam);
+  const myPerSlot = getPerSlot(myTeam);
+  const adjVal = getAdjustedValue(player);
+  const pos = player.pos;
+  const iNeed = posNeedCount(myNeeds, pos) > 0;
+  const phase = getDraftPhase();
+  const slotsLeft = TOTAL_SLOTS - myTeam.players.length;
+  const isHighPri = (pos === 'RB' || pos === 'WR') && iNeed;
+  const isLowPri = (pos === 'QB' || pos === 'TE') && iNeed;
+  const isMinimal = (pos === 'K' || pos === 'DST') && iNeed;
+  const isTarget = state.targets.has(player.id);
+
+  if (slotsLeft <= 0) return {text:'FULL', css:'advice-pass', tip:'Roster complete'};
+  if (adjVal > myMaxBid) return {text:'PASS', css:'advice-pass', tip:`Can't afford ($${myMaxBid} max)`};
+
+  // Starred target — always show BID
+  if (isTarget && iNeed) {
+    const max = Math.min(adjVal + Math.round(adjVal * 0.1), myMaxBid);
+    return {text:`BID $${max}`, css:'advice-bid', tip:'Your target! Bid aggressively'};
+  }
+
+  // Don't need position at all
+  if (!iNeed) return {text:'PASS', css:'advice-pass', tip:`${pos} filled`};
+
+  // K/DST — always $1, never pay more
+  if (isMinimal) {
+    return {text:'$1 ONLY', css:'advice-wait', tip:`Only bid $1 on ${pos}. Stream weekly.`};
+  }
+
+  // QB/TE — low priority under Stars & Scrubs
+  if (isLowPri) {
+    if (player.tier >= 4) {
+      return {text:`BID $${Math.min(adjVal, 5)}`, css:'advice-maybe', tip:`Fill ${pos} cheap. Don't overpay.`};
+    }
+    if (phase === 'early' || phase === 'mid') {
+      return {text:'WAIT', css:'advice-wait', tip:`Fill ${pos} later for $5-10. Let others overpay now.`};
+    }
+    const max = Math.min(adjVal, myMaxBid);
+    return {text:`MAX $${max}`, css:'advice-maybe', tip:`${pos} getting scarce. Bid up to $${max}.`};
+  }
+
+  // HIGH PRIORITY: RB/WR
+  if (isHighPri) {
+    if (player.tier <= 1) {
+      const max = Math.min(adjVal + 5, myMaxBid);
+      return {text:`BID $${max}`, css:'advice-bid', tip:`Elite ${pos}. Push hard to $${max}. Build your core.`};
+    }
+    if (player.tier === 2) {
+      const max = Math.min(adjVal + 3, myMaxBid);
+      return {text:`BID $${max}`, css:'advice-bid', tip:`Strong ${pos} starter. Solid value up to $${max}.`};
+    }
+    if (player.tier === 3) {
+      const max = Math.min(adjVal, myMaxBid);
+      return {text:`MAX $${max}`, css:'advice-maybe', tip:`Decent ${pos}. Don't chase past $${max}.`};
+    }
+    if (player.tier >= 4 && adjVal <= 5) {
+      return {text:`BID $${adjVal}`, css:'advice-maybe', tip:`Bench depth. Cheap fill.`};
+    }
+    return {text:'PASS', css:'advice-pass', tip:`Better ${pos}s available. Save your budget.`};
+  }
+
+  // FLEX-eligible fallback
+  if (FLEX_POS.includes(pos) && myNeeds.FLEX > 0) {
+    const max = Math.min(adjVal, myMaxBid);
+    return {text:`FLEX $${max}`, css:'advice-maybe', tip:`Could fill FLEX. Max $${max}.`};
+  }
+
+  return {text:'PASS', css:'advice-pass', tip:'Not a priority'};
+}
+
 function getAllocationAdvice() {
   const myTeam = state.teams[state.myTeamId];
   const needs = getTeamNeeds(myTeam);
@@ -1543,6 +1631,11 @@ function renderBoard() {
       <td class="val-cell ${valClass}">$${adjVal}</td>
       <td style="color:var(--muted);">${p.pts}</td>
       <td><span class="tier-badge tier-${p.tier}">${p.tier}</span></td>
+      <td>${(() => {
+        if (drafted) return '';
+        const adv = getPlayerAdvice(p);
+        return `<span class="advice-badge ${adv.css}" title="${adv.tip}">${adv.text}</span>`;
+      })()}</td>
       <td>
         ${drafted ?
           (pick ? `<span style="font-size:9px;color:var(--muted);">${state.teams[pick.teamId].name} $${pick.price}</span>` : 'GONE') :
