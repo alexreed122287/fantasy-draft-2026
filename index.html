@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
 <title>Auction Draft Command Center 2026</title>
 <style>
 :root {
@@ -279,7 +282,8 @@ input, select, button, textarea { font-family: inherit; }
 .team-card:hover { background: rgba(255,255,255,0.02); border-left-color: var(--dim); }
 .team-card.my-team { border-left-color: var(--muted); background: rgba(255,255,255,0.02); }
 .team-card-header { display: flex; justify-content: space-between; align-items: center; }
-.team-logo { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.team-logo { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; flex-shrink: 0; display: inline-block; }
+.team-logo-fallback { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #fff; text-transform: uppercase; }
 .team-name { font-size: 11px; font-weight: bold; }
 .team-budget { font-size: 12px; font-weight: bold; color: var(--green); }
 .team-meta { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); margin-top: 2px; }
@@ -607,14 +611,25 @@ input, select, button, textarea { font-family: inherit; }
   pointer-events: none;
 }
 .splash-title {
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: 5px;
+  font-family: 'Anton', sans-serif;
+  font-size: clamp(32px, 6vw, 72px);
+  font-weight: 400;
+  letter-spacing: 8px;
   text-transform: uppercase;
-  color: #e0e2e6;
+  color: #fff;
   position: absolute;
-  top: 6%;
+  top: 5%;
   z-index: 1;
+  text-shadow:
+    0 0 20px rgba(192,57,43,0.8),
+    0 0 40px rgba(192,57,43,0.5),
+    0 0 80px rgba(192,57,43,0.3),
+    0 2px 4px rgba(0,0,0,0.9),
+    0 4px 12px rgba(0,0,0,0.6);
+  -webkit-text-stroke: 1px rgba(192,57,43,0.4);
+  text-align: center;
+  line-height: 1.1;
+  padding: 0 20px;
 }
 .splash-img {
   max-height: 65vh;
@@ -623,6 +638,8 @@ input, select, button, textarea { font-family: inherit; }
   transform: rotate(90deg);
   filter: drop-shadow(0 0 30px rgba(91,141,191,0.2));
   margin-top: 40px;
+  -webkit-mask-image: radial-gradient(ellipse 90% 85% at center, #000 60%, transparent 100%);
+  mask-image: radial-gradient(ellipse 90% 85% at center, #000 60%, transparent 100%);
 }
 .splash-toggle {
   background: none;
@@ -1258,6 +1275,17 @@ const TEAM_LOGOS = [
   'https://i.imgflip.com/2/thj4b.jpg',
   'https://g.espncdn.com/lm-static/logo-packs/ffl/CreepShow-ToddDetwiler/CreepShow-01.svg'
 ];
+
+const TEAM_COLORS = ['#c0392b','#8e44ad','#2980b9','#27ae60','#1abc9c','#d35400','#e67e22','#f39c12','#7f8c8d','#2c3e50'];
+const TEAM_INITIALS = ['WC','TK','MF','RB','TLK','BD','DH','MLT','JS','BB'];
+
+function logoFallback(img, teamId) {
+  const fb = document.createElement('span');
+  fb.className = 'team-logo-fallback';
+  fb.style.background = TEAM_COLORS[teamId] || '#555';
+  fb.textContent = TEAM_INITIALS[teamId] || '?';
+  img.replaceWith(fb);
+}
 
 const ROOKIE_PICKS = [
   {teamId:0, playerId:200},
@@ -2136,7 +2164,7 @@ function renderLeague() {
 
     html += `<div class="team-card ${isMe ? 'my-team' : ''}" onclick="showTeamDetail(${team.id})">
       <div class="team-card-header">
-        <img class="team-logo" src="${TEAM_LOGOS[team.id]}" alt="">
+        <img class="team-logo" src="${TEAM_LOGOS[team.id]}" alt="" onerror="logoFallback(this,${team.id})">
         <span class="team-name" style="flex:1;margin-left:6px;">${isMe ? '>> ' : ''}${team.name}</span>
         <span class="team-budget">$${team.budget}</span>
       </div>
