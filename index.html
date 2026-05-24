@@ -666,7 +666,15 @@ input, select, button, textarea { font-family: inherit; }
   </div>
 
   <!-- BOTTOM: STRATEGY BAR -->
-  <div class="strategy-bar" id="strategy-bar"></div>
+  <div style="grid-column:1/-1;background:var(--surface);border-top:2px solid var(--border);">
+    <div class="section-header collapsed" onclick="toggleSection(this)" style="padding:6px 16px;margin:0;border-bottom:none;">
+      <div class="panel-title" style="margin:0;padding:0;border:none;">Strategy</div>
+      <span class="section-toggle">&#9660;</span>
+    </div>
+    <div class="section-body collapsed">
+      <div class="strategy-bar" id="strategy-bar" style="border-top:none;"></div>
+    </div>
+  </div>
 </div>
 
 <!-- DRAFT MODAL -->
