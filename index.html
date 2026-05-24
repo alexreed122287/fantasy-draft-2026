@@ -246,6 +246,58 @@ input, select, button, textarea { font-family: inherit; }
 .ovr-rank { font-size: 10px; color: var(--muted); font-weight: 600; }
 .nfl-logo { width: 20px; height: 20px; object-fit: contain; vertical-align: middle; }
 
+.mock-banner {
+  display: none;
+  grid-column: 1 / -1;
+  padding: 6px 16px;
+  background: #fef3c7;
+  border-bottom: 2px solid #d97706;
+  font-size: 12px;
+  font-weight: 700;
+  color: #92400e;
+  text-align: center;
+  letter-spacing: 1px;
+}
+.mock-banner.active { display: block; }
+.mock-banner .mock-exit { margin-left: 12px; padding: 3px 10px; font-size: 10px; background: #fff; border: 1px solid #d97706; color: #92400e; border-radius: 4px; cursor: pointer; font-weight: 600; }
+.mock-banner .mock-exit:hover { background: #fde68a; }
+
+.mock-recap-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  justify-content: center;
+  align-items: center;
+  overflow-y: auto;
+}
+.mock-recap-overlay.active { display: flex; }
+.mock-recap {
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 620px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+.mock-recap h2 { font-size: 16px; margin-bottom: 12px; color: var(--text); border-bottom: 2px solid var(--blue); padding-bottom: 8px; }
+.mock-recap h3 { font-size: 13px; margin: 14px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.recap-grade { font-size: 48px; font-weight: 900; text-align: center; margin: 8px 0; }
+.recap-score { text-align: center; font-size: 14px; color: var(--muted); margin-bottom: 16px; }
+.recap-picks { font-size: 11px; line-height: 1.8; }
+.recap-pick { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid var(--border); }
+.recap-pick .rp-val { font-weight: 600; }
+.recap-pick .rp-good { color: var(--green); }
+.recap-pick .rp-bad { color: var(--red); }
+.recap-pick .rp-ok { color: var(--muted); }
+.recap-tips { font-size: 11px; line-height: 1.7; color: var(--text); }
+.recap-tips li { margin-bottom: 6px; }
+.recap-close { margin-top: 16px; width: 100%; padding: 10px; font-size: 13px; font-weight: 700; background: var(--blue); color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+.recap-close:hover { opacity: 0.9; }
+
 .draft-btn {
   padding: 2px 8px;
   background: transparent;
@@ -855,6 +907,7 @@ input, select, button, textarea { font-family: inherit; }
 </div>
 
 <div class="app">
+  <div class="mock-banner" id="mock-banner">MOCK DRAFT MODE <button class="mock-exit" onclick="exitMockDraft()">Exit Mock</button></div>
   <!-- HEADER -->
   <div class="header">
     <h1>Draft HQ <span style="font-size:8px;color:var(--dim);vertical-align:middle;margin-left:6px;letter-spacing:1px;">HALF PPR</span></h1>
@@ -882,6 +935,7 @@ input, select, button, textarea { font-family: inherit; }
     </div>
     <div class="header-actions">
       <button class="btn btn-danger" onclick="undoLastPick()">Undo</button>
+      <button class="btn" onclick="startMockDraft()" id="mock-btn" style="background:#fef3c7;color:#92400e;border-color:#d97706;font-weight:700;">Mock</button>
       <button class="btn btn-warn" onclick="openSettings()">Setup</button>
       <button class="btn" onclick="openImport()">Import</button>
       <button class="btn" onclick="saveState()">Save</button>
@@ -1047,6 +1101,11 @@ input, select, button, textarea { font-family: inherit; }
       <button class="btn btn-accent" onclick="confirmDraft()">Confirm Draft</button>
     </div>
   </div>
+</div>
+
+<!-- MOCK RECAP -->
+<div class="mock-recap-overlay" id="mock-recap-overlay">
+  <div class="mock-recap" id="mock-recap-content"></div>
 </div>
 
 <!-- SETTINGS MODAL -->
@@ -1918,11 +1977,16 @@ function openDraftModal(playerId) {
     </div>
   `;
 
-  const snakeTeamId = getSnakeNominator(state.pickNumber);
+  const snakeTeamId = mockMode ? state.myTeamId : getSnakeNominator(state.pickNumber);
   const sel = document.getElementById('draft-team-select');
-  sel.innerHTML = state.teams.map(t =>
-    `<option value="${t.id}" ${t.id === snakeTeamId ? 'selected' : ''}>${t.name} ($${t.budget} left)</option>`
-  ).join('');
+  if (mockMode) {
+    const t = state.teams[state.myTeamId];
+    sel.innerHTML = `<option value="${t.id}" selected>${t.name} ($${t.budget} left)</option>`;
+  } else {
+    sel.innerHTML = state.teams.map(t =>
+      `<option value="${t.id}" ${t.id === snakeTeamId ? 'selected' : ''}>${t.name} ($${t.budget} left)</option>`
+    ).join('');
+  }
 
   document.getElementById('draft-price').value = adjVal;
   updateWhatIf();
@@ -1989,7 +2053,8 @@ function confirmDraft() {
   closeDraftModal();
   renderAll();
   toast(`${player.name} to ${team.name} for $${price}`, 'success');
-  autoSave();
+  if (mockMode) setTimeout(() => mockAutoAdvance(), 200);
+  else autoSave();
 }
 
 function undoLastPick() {
@@ -2784,6 +2849,220 @@ function toast(msg, type = 'info') {
   t.textContent = msg;
   container.appendChild(t);
   setTimeout(() => t.remove(), 3000);
+}
+
+// ===========================
+// MOCK DRAFT
+// ===========================
+let mockMode = false;
+let realState = null;
+
+function startMockDraft() {
+  if (mockMode) return;
+  realState = JSON.parse(JSON.stringify({
+    myTeamId: state.myTeamId,
+    teams: state.teams,
+    picks: state.picks,
+    targets: [...state.targets],
+    avoids: [...state.avoids],
+    nominationOrder: state.nominationOrder,
+    currentNomIdx: state.currentNomIdx,
+    pickNumber: state.pickNumber
+  }));
+  state.picks = [];
+  state.pickNumber = 0;
+  state.currentNomIdx = 0;
+  initTeams();
+  mockMode = true;
+  document.getElementById('mock-banner').classList.add('active');
+  document.getElementById('mock-btn').style.display = 'none';
+  renderAll();
+  toast('Mock draft started! Other teams will auto-pick.', 'success');
+  mockAutoAdvance();
+}
+
+function exitMockDraft() {
+  if (!mockMode) return;
+  mockMode = false;
+  document.getElementById('mock-banner').classList.remove('active');
+  document.getElementById('mock-btn').style.display = '';
+  state.myTeamId = realState.myTeamId;
+  state.teams = realState.teams;
+  state.picks = realState.picks;
+  state.targets = new Set(realState.targets);
+  state.avoids = new Set(realState.avoids);
+  state.nominationOrder = realState.nominationOrder;
+  state.currentNomIdx = realState.currentNomIdx;
+  state.pickNumber = realState.pickNumber;
+  realState = null;
+  renderAll();
+  toast('Returned to real draft', 'success');
+}
+
+function mockAiPick(teamId) {
+  const team = state.teams[teamId];
+  const avail = getAvailablePlayers();
+  if (avail.length === 0) return null;
+  const slotsLeft = TOTAL_SLOTS - team.players.length;
+  if (slotsLeft <= 0) return null;
+  const maxBid = getMaxBid(team);
+  const needs = getTeamNeeds(team);
+  const urgentNeed = Object.entries(needs).filter(([k,v]) => v > 0 && k !== 'BN').map(([k]) => k);
+
+  let candidates = avail.filter(p => p.val <= maxBid);
+  if (candidates.length === 0) candidates = avail.filter(p => 1 <= maxBid);
+  if (candidates.length === 0) return null;
+
+  candidates.forEach(p => {
+    const adjVal = getAdjustedValue(p);
+    const needBonus = urgentNeed.includes(p.pos) ? 1.3 : 1;
+    const lateDiscount = slotsLeft <= 3 ? 0.7 : 1;
+    p._score = adjVal * needBonus * lateDiscount + (Math.random() * 4 - 2);
+  });
+
+  candidates.sort((a, b) => b._score - a._score);
+  const pick = candidates[0];
+  const adjVal = getAdjustedValue(pick);
+  const variance = Math.round((Math.random() * 0.3 - 0.1) * adjVal);
+  let price = Math.max(1, Math.min(maxBid, adjVal + variance));
+  if (slotsLeft <= 2 && price > 2) price = Math.min(price, 3);
+
+  team.budget -= price;
+  team.players.push({player: pick, price});
+  state.picks.push({player: pick, price, teamId, pickNumber: state.pickNumber});
+  state.pickNumber++;
+  return pick;
+}
+
+function mockAutoAdvance() {
+  if (!mockMode) return;
+  const totalPicks = NUM_TEAMS * TOTAL_SLOTS;
+  if (state.pickNumber >= totalPicks || getAvailablePlayers().length === 0) {
+    renderAll();
+    showMockRecap();
+    return;
+  }
+  const nomTeamId = getSnakeNominator(state.pickNumber);
+  if (nomTeamId === state.myTeamId) {
+    renderAll();
+    return;
+  }
+  mockAiPick(nomTeamId);
+  renderHeader();
+  renderLeague();
+  setTimeout(mockAutoAdvance, 350);
+}
+
+
+function scoreMockDraft() {
+  const myTeam = state.teams[state.myTeamId];
+  const myPicks = state.picks.filter(p => p.teamId === state.myTeamId && !p.rookie);
+  let totalScore = 0;
+  const pickDetails = [];
+
+  myPicks.forEach(pk => {
+    const adjVal = getAdjustedValue(pk.player);
+    const diff = adjVal - pk.price;
+    const pctDiff = pk.price > 0 ? ((adjVal - pk.price) / Math.max(adjVal, 1)) * 100 : 0;
+    let grade, css;
+    if (diff >= 5) { grade = 'STEAL'; css = 'rp-good'; totalScore += 15; }
+    else if (diff >= 2) { grade = 'GOOD'; css = 'rp-good'; totalScore += 8; }
+    else if (diff >= -2) { grade = 'FAIR'; css = 'rp-ok'; totalScore += 3; }
+    else if (diff >= -5) { grade = 'OVERPAY'; css = 'rp-bad'; totalScore -= 5; }
+    else { grade = 'BAD'; css = 'rp-bad'; totalScore -= 12; }
+    pickDetails.push({player: pk.player, price: pk.price, adjVal, diff, grade, css});
+  });
+
+  const roster = getTeamRoster(myTeam);
+  const rosterNeeds = getTeamNeeds(myTeam);
+  const unfilledStarters = Object.entries(rosterNeeds).filter(([k,v]) => v > 0 && k !== 'BN').length;
+  if (unfilledStarters === 0) totalScore += 10;
+  else totalScore -= unfilledStarters * 8;
+
+  const starterPts = [...roster.QB, ...roster.RB, ...roster.WR, ...roster.TE, ...roster.FLEX].reduce((s,p) => s + p.player.pts, 0);
+  const ptsBonus = Math.round((starterPts - 900) / 20);
+  totalScore += ptsBonus;
+
+  const budgetLeft = myTeam.budget;
+  if (budgetLeft > 5) totalScore -= Math.round(budgetLeft / 2);
+
+  const maxScore = 130;
+  const pct = Math.max(0, Math.min(100, Math.round((totalScore / maxScore) * 100)));
+  let letterGrade;
+  if (pct >= 90) letterGrade = 'A+';
+  else if (pct >= 80) letterGrade = 'A';
+  else if (pct >= 70) letterGrade = 'B+';
+  else if (pct >= 60) letterGrade = 'B';
+  else if (pct >= 50) letterGrade = 'C+';
+  else if (pct >= 40) letterGrade = 'C';
+  else if (pct >= 30) letterGrade = 'D';
+  else letterGrade = 'F';
+
+  return {pickDetails, totalScore, pct, letterGrade, starterPts, budgetLeft, unfilledStarters, roster};
+}
+
+function generateTips(result) {
+  const tips = [];
+  const overpays = result.pickDetails.filter(p => p.grade === 'OVERPAY' || p.grade === 'BAD');
+  const steals = result.pickDetails.filter(p => p.grade === 'STEAL');
+
+  if (overpays.length >= 3) tips.push('You overpaid on ' + overpays.length + ' picks. Let other managers drive prices up and wait for value to fall to you.');
+  else if (overpays.length > 0) tips.push('You overpaid on ' + overpays.map(p => p.player.name).join(', ') + '. Try nominating players you DON\'T want first to drain other budgets.');
+
+  if (steals.length >= 3) tips.push('Great job finding ' + steals.length + ' steals! Keep exploiting mid-draft when others are tapped out.');
+
+  if (result.budgetLeft > 10) tips.push('You left $' + result.budgetLeft + ' on the table. Spend more aggressively in later rounds. Every unspent dollar is a wasted advantage.');
+  else if (result.budgetLeft <= 2) tips.push('Good budget management -- you used nearly all your money.');
+
+  if (result.unfilledStarters > 0) tips.push('You left ' + result.unfilledStarters + ' starter slot(s) unfilled. Prioritize filling your starting lineup before loading bench depth.');
+
+  const rbCount = result.pickDetails.filter(p => p.player.pos === 'RB').length;
+  const wrCount = result.pickDetails.filter(p => p.player.pos === 'WR').length;
+  if (rbCount <= 1) tips.push('You only drafted ' + rbCount + ' RB(s). In half-PPR, elite RBs are scarce -- consider paying up for at least 2.');
+  if (wrCount <= 1) tips.push('Only ' + wrCount + ' WR(s) drafted. WR depth is critical in half-PPR formats.');
+
+  const earlyPicks = result.pickDetails.slice(0, 3);
+  const earlyOverpays = earlyPicks.filter(p => p.diff < -3);
+  if (earlyOverpays.length >= 2) tips.push('Your first few picks were overpays. Let the field set the market early -- nominate bait players you don\'t want in rounds 1-3.');
+
+  if (result.starterPts < 850) tips.push('Projected starter points are low (' + result.starterPts + '). Focus on acquiring high-floor starters over bench depth.');
+  else if (result.starterPts > 1000) tips.push('Excellent projected starters (' + result.starterPts + ' pts). This roster has championship upside.');
+
+  if (tips.length === 0) tips.push('Solid draft overall. Keep practicing different strategies to find what works best for your league.');
+  return tips;
+}
+
+function showMockRecap() {
+  const result = scoreMockDraft();
+  const gradeColor = result.pct >= 70 ? 'var(--green)' : result.pct >= 50 ? 'var(--gold)' : 'var(--red)';
+
+  let html = `<h2>Mock Draft Recap</h2>`;
+  html += `<div class="recap-grade" style="color:${gradeColor}">${result.letterGrade}</div>`;
+  html += `<div class="recap-score">Score: ${result.totalScore} pts (${result.pct}%) | Starters: ${result.starterPts} proj pts | $${result.budgetLeft} unspent</div>`;
+
+  html += `<h3>Your Picks</h3><div class="recap-picks">`;
+  result.pickDetails.forEach(p => {
+    const sign = p.diff >= 0 ? '+' : '';
+    html += `<div class="recap-pick">
+      <span><span class="pos-badge pos-${p.player.pos}" style="font-size:8px;padding:1px 4px;">${p.player.pos}</span> ${p.player.name}</span>
+      <span><span class="rp-val">$${p.price}</span> <span style="font-size:10px;color:var(--muted);">FV $${p.adjVal}</span> <span class="${p.css}" style="font-size:10px;font-weight:600;">${sign}${p.diff} ${p.grade}</span></span>
+    </div>`;
+  });
+  html += `</div>`;
+
+  html += `<h3>Recommendations</h3><ul class="recap-tips">`;
+  generateTips(result).forEach(t => html += `<li>${t}</li>`);
+  html += `</ul>`;
+
+  html += `<button class="recap-close" onclick="closeMockRecap()">Close & Exit Mock Draft</button>`;
+
+  document.getElementById('mock-recap-content').innerHTML = html;
+  document.getElementById('mock-recap-overlay').classList.add('active');
+}
+
+function closeMockRecap() {
+  document.getElementById('mock-recap-overlay').classList.remove('active');
+  exitMockDraft();
 }
 
 // ===========================
