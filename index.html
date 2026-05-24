@@ -568,6 +568,25 @@ input, select, button, textarea { font-family: inherit; }
   flex-shrink: 0;
 }
 .bid-tracker-close:hover { color: var(--text); }
+.bt-inc-group {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.bt-inc {
+  padding: 3px 6px;
+  font-size: 9px;
+  font-weight: 600;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.bt-inc:hover { border-color: var(--blue); color: var(--text); }
+.bt-inc.bt-reset { border-color: var(--dim); color: var(--dim); }
+.bt-inc.bt-reset:hover { border-color: var(--red); color: var(--red); }
 .bid-meter {
   width: 60px;
   height: 4px;
@@ -725,7 +744,15 @@ input, select, button, textarea { font-family: inherit; }
     <div class="bid-tracker" id="bid-tracker">
       <div class="bid-tracker-player" id="bt-player"></div>
       <span style="color:var(--dim);">Bid:</span>
-      <input type="number" class="bid-tracker-input" id="bt-bid" min="1" max="200" value="1" oninput="updateBidTracker()">
+      <input type="number" class="bid-tracker-input" id="bt-bid" min="0" max="200" value="1" oninput="updateBidTracker()">
+      <div class="bt-inc-group">
+        <button class="bt-inc" onclick="adjBid(1)">+$1</button>
+        <button class="bt-inc" onclick="adjBid(2)">+$2</button>
+        <button class="bt-inc" onclick="adjBid(5)">+$5</button>
+        <button class="bt-inc" onclick="adjBid(10)">+$10</button>
+        <button class="bt-inc" onclick="adjBid(20)">+$20</button>
+        <button class="bt-inc bt-reset" onclick="resetBid()">Reset</button>
+      </div>
       <div class="bid-meter"><div class="bid-meter-fill" id="bt-meter"></div></div>
       <div class="bid-verdict" id="bt-verdict"></div>
       <button class="bid-tracker-close" onclick="closeBidTracker()" title="Close">&times;</button>
@@ -1150,6 +1177,14 @@ function isDrafted(pid) {
 
 function isDraftedByMe(pid) {
   return state.picks.some(p => p.player.id === pid && p.teamId === state.myTeamId);
+}
+
+function getSnakeNominator(pickNum) {
+  const round = Math.floor(pickNum / NUM_TEAMS);
+  const pos = pickNum % NUM_TEAMS;
+  return round % 2 === 0
+    ? state.nominationOrder[pos]
+    : state.nominationOrder[NUM_TEAMS - 1 - pos];
 }
 
 // ===========================
@@ -1622,9 +1657,10 @@ function openDraftModal(playerId) {
     </div>
   `;
 
+  const snakeTeamId = getSnakeNominator(state.pickNumber);
   const sel = document.getElementById('draft-team-select');
   sel.innerHTML = state.teams.map(t =>
-    `<option value="${t.id}" ${t.id === state.myTeamId ? '' : ''}>${t.name} ($${t.budget} left)</option>`
+    `<option value="${t.id}" ${t.id === snakeTeamId ? 'selected' : ''}>${t.name} ($${t.budget} left)</option>`
   ).join('');
 
   document.getElementById('draft-price').value = adjVal;
@@ -1688,7 +1724,6 @@ function confirmDraft() {
   team.players.push({player, price});
   state.picks.push({player, price, teamId, pickNumber: state.pickNumber});
   state.pickNumber++;
-  state.currentNomIdx = (state.currentNomIdx + 1) % state.nominationOrder.length;
 
   closeDraftModal();
   renderAll();
@@ -1703,7 +1738,6 @@ function undoLastPick() {
   team.budget += last.price;
   team.players = team.players.filter(p => p.player.id !== last.player.id);
   state.pickNumber = Math.max(0, state.pickNumber - 1);
-  state.currentNomIdx = (state.currentNomIdx - 1 + state.nominationOrder.length) % state.nominationOrder.length;
   renderAll();
   toast(`Undid: ${last.player.name}`, 'warn');
   autoSave();
@@ -1750,7 +1784,7 @@ function renderHeader() {
   document.getElementById('hdr-pick').textContent = state.pickNumber + 1;
   document.getElementById('hdr-perslot').textContent = `$${getPerSlot(myTeam)}`;
 
-  const nomTeamId = state.nominationOrder[state.currentNomIdx];
+  const nomTeamId = getSnakeNominator(state.pickNumber);
   const nomTeam = state.teams[nomTeamId];
   const nomEl = document.getElementById('hdr-nominator');
   if (nomTeamId === state.myTeamId) {
@@ -1959,7 +1993,7 @@ function renderLeague() {
 
 function renderStrategy() {
   const bar = document.getElementById('strategy-bar');
-  const nomTeamId = state.nominationOrder[state.currentNomIdx];
+  const nomTeamId = getSnakeNominator(state.pickNumber);
   const isMyTurn = nomTeamId === state.myTeamId;
   const suggestions = getNominationSuggestions();
   const myNeeds = getTeamNeeds(state.teams[state.myTeamId]);
@@ -2350,6 +2384,19 @@ function openBidTracker(playerId) {
 function closeBidTracker() {
   document.getElementById('bid-tracker').classList.remove('active');
   bidTrackerId = null;
+}
+
+function adjBid(amount) {
+  const el = document.getElementById('bt-bid');
+  el.value = Math.min(200, Math.max(0, (parseInt(el.value) || 0) + amount));
+  updateBidTracker();
+}
+
+function resetBid() {
+  if (!bidTrackerId) return;
+  const player = PLAYERS.find(p => p.id === bidTrackerId);
+  document.getElementById('bt-bid').value = player ? getAdjustedValue(player) : 1;
+  updateBidTracker();
 }
 
 function updateBidTracker() {
