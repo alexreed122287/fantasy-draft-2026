@@ -587,6 +587,68 @@ input, select, button, textarea { font-family: inherit; }
 .bt-inc:hover { border-color: var(--blue); color: var(--text); }
 .bt-inc.bt-reset { border-color: var(--dim); color: var(--dim); }
 .bt-inc.bt-reset:hover { border-color: var(--red); color: var(--red); }
+
+/* Splash Overlay */
+.splash-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #080810;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity .4s;
+}
+.splash-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.splash-img {
+  max-width: 70%;
+  max-height: 55vh;
+  object-fit: contain;
+  filter: drop-shadow(0 0 40px rgba(91,141,191,0.25));
+}
+.splash-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: var(--text);
+  margin-top: 32px;
+}
+.splash-sub {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  margin-top: 10px;
+}
+.splash-hint {
+  position: absolute;
+  bottom: 30px;
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 2px;
+  animation: splashPulse 2s ease-in-out infinite;
+}
+@keyframes splashPulse {
+  0%, 100% { opacity: .3; }
+  50% { opacity: .8; }
+}
+.splash-toggle {
+  background: none;
+  border: 1px solid var(--dim);
+  color: var(--dim);
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  font-family: inherit;
+  letter-spacing: .5px;
+}
+.splash-toggle:hover { border-color: var(--blue); color: var(--blue); }
 .bid-meter {
   width: 60px;
   height: 4px;
@@ -650,6 +712,13 @@ input, select, button, textarea { font-family: inherit; }
 </head>
 <body>
 
+<div class="splash-overlay" id="splash" onclick="dismissSplash()">
+  <img class="splash-img" src="splash.jpg" alt="">
+  <div class="splash-title">Draft HQ</div>
+  <div class="splash-sub">Auction Command Center 2026</div>
+  <div class="splash-hint">CLICK ANYWHERE TO ENTER</div>
+</div>
+
 <div class="app">
   <!-- HEADER -->
   <div class="header">
@@ -683,6 +752,7 @@ input, select, button, textarea { font-family: inherit; }
       <button class="btn" onclick="saveState()">Save</button>
       <button class="btn" onclick="loadState()">Load</button>
       <button class="btn" onclick="resetDraft()">Reset</button>
+      <button class="splash-toggle" onclick="showSplash()">Cover</button>
     </div>
   </div>
 
@@ -2379,6 +2449,19 @@ function openBidTracker(playerId) {
   document.getElementById('bid-tracker').classList.add('active');
   document.getElementById('bt-bid').focus();
   updateBidTracker();
+}
+
+function dismissSplash() {
+  const el = document.getElementById('splash');
+  el.classList.add('hidden');
+  setTimeout(() => el.style.display = 'none', 400);
+}
+
+function showSplash() {
+  const el = document.getElementById('splash');
+  el.style.display = 'flex';
+  el.offsetHeight;
+  el.classList.remove('hidden');
 }
 
 function closeBidTracker() {
