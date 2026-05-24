@@ -1,0 +1,1706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auction Draft Command Center 2026</title>
+<style>
+:root {
+  --bg: #08080e;
+  --surface: #111118;
+  --card: #191922;
+  --border: #2a2a3a;
+  --accent: #00d4aa;
+  --accent2: #00b894;
+  --warn: #ff6b35;
+  --danger: #ff3366;
+  --gold: #ffd700;
+  --blue: #4dabf7;
+  --purple: #b197fc;
+  --text: #e0e0e8;
+  --muted: #777790;
+  --dim: #444458;
+  --green: #00d68f;
+  --red: #ff5c5c;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: var(--bg); color: var(--text); height:100vh; overflow:hidden; }
+input, select, button, textarea { font-family: inherit; }
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--dim); border-radius:3px; }
+
+.app {
+  display: grid;
+  grid-template-columns: 270px 1fr 260px;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
+  gap: 1px;
+  background: var(--border);
+}
+
+/* HEADER */
+.header {
+  grid-column: 1 / -1;
+  background: var(--surface);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.header h1 { font-size: 14px; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; white-space: nowrap; }
+.header-stats { display: flex; gap: 20px; flex: 1; justify-content: center; }
+.stat { text-align: center; }
+.stat-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.stat-value { font-size: 18px; font-weight: bold; }
+.stat-value.money { color: var(--green); }
+.stat-value.picks { color: var(--blue); }
+.stat-value.round { color: var(--warn); }
+.header-actions { display: flex; gap: 6px; }
+.btn { padding: 6px 12px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; border-radius: 4px; font-size: 11px; transition: all .15s; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn-accent { background: var(--accent); color: #000; border-color: var(--accent); font-weight: bold; }
+.btn-accent:hover { background: var(--accent2); }
+.btn-danger { border-color: var(--danger); color: var(--danger); }
+.btn-danger:hover { background: var(--danger); color: #fff; }
+.btn-warn { border-color: var(--warn); color: var(--warn); }
+.btn-warn:hover { background: var(--warn); color: #000; }
+.btn-sm { padding: 3px 8px; font-size: 10px; }
+
+/* LEFT PANEL - MY TEAM */
+.my-team-panel {
+  background: var(--surface);
+  overflow-y: auto;
+  padding: 10px;
+}
+.panel-title {
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.roster-slot {
+  display: flex;
+  align-items: center;
+  padding: 5px 6px;
+  margin-bottom: 2px;
+  border-radius: 4px;
+  background: var(--card);
+  font-size: 11px;
+  gap: 6px;
+  min-height: 30px;
+}
+.roster-slot.filled { border-left: 3px solid var(--accent); }
+.roster-slot.empty { border-left: 3px solid var(--dim); opacity: 0.6; }
+.roster-slot.need { border-left: 3px solid var(--warn); opacity: 1; }
+.slot-pos { font-weight: bold; color: var(--muted); min-width: 32px; font-size: 10px; }
+.slot-player { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot-price { color: var(--green); font-weight: bold; }
+.slot-empty-text { color: var(--dim); font-style: italic; font-size: 10px; }
+
+.needs-section { margin-top: 12px; }
+.need-item { display: flex; justify-content: space-between; padding: 3px 6px; font-size: 10px; color: var(--muted); }
+.need-item.urgent { color: var(--warn); font-weight: bold; }
+
+.budget-bar { margin-top: 12px; }
+.budget-breakdown { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+.budget-visual {
+  height: 8px;
+  background: var(--card);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+}
+.budget-spent { background: var(--danger); transition: width .3s; }
+.budget-reserved { background: var(--warn); transition: width .3s; }
+.budget-free { background: var(--green); transition: width .3s; }
+
+.strategy-box {
+  margin-top: 12px;
+  padding: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.strategy-title { font-size: 10px; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.strategy-text { font-size: 10px; color: var(--text); line-height: 1.5; }
+
+/* CENTER - PLAYER BOARD */
+.player-board {
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.board-controls {
+  padding: 8px 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.search-box {
+  flex: 1;
+  min-width: 150px;
+  padding: 6px 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  font-size: 12px;
+}
+.search-box:focus { outline: none; border-color: var(--accent); }
+.pos-filters { display: flex; gap: 3px; }
+.pos-btn { padding: 4px 10px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; border-radius: 3px; font-size: 10px; font-weight: bold; }
+.pos-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+.pos-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+.sort-btns { display: flex; gap: 3px; }
+.view-toggle { display: flex; gap: 3px; margin-left: auto; }
+
+.player-table-wrap {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 4px;
+}
+.player-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.player-table th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  padding: 6px 8px;
+  text-align: left;
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+  z-index: 2;
+}
+.player-table th:hover { color: var(--accent); }
+.player-table th.sorted { color: var(--accent); }
+.player-table td { padding: 5px 8px; border-bottom: 1px solid rgba(42,42,58,0.3); }
+.player-table tr { transition: background .1s; }
+.player-table tr:hover { background: rgba(0,212,170,0.05); }
+.player-table tr.drafted { opacity: 0.3; text-decoration: line-through; }
+.player-table tr.drafted-mine { opacity: 1; text-decoration: none; background: rgba(0,212,170,0.08); }
+.player-table tr.target { background: rgba(255,215,0,0.06); }
+.player-table tr.avoid { background: rgba(255,51,102,0.06); }
+
+.pos-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: bold;
+  text-align: center;
+  min-width: 28px;
+}
+.pos-QB { background: #3d2c6e; color: #b197fc; }
+.pos-RB { background: #2c6e4f; color: #69db7c; }
+.pos-WR { background: #2c5a6e; color: #74c0fc; }
+.pos-TE { background: #6e5a2c; color: #ffd43b; }
+.pos-K { background: #4a3a2c; color: #ffa94d; }
+.pos-DST { background: #4a2c2c; color: #ff8787; }
+
+.val-cell { font-weight: bold; }
+.val-up { color: var(--green); }
+.val-down { color: var(--red); }
+.val-neutral { color: var(--muted); }
+
+.tier-badge {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 16px;
+  font-size: 8px;
+  font-weight: bold;
+}
+.tier-1 { background: var(--gold); color: #000; }
+.tier-2 { background: #aaa; color: #000; }
+.tier-3 { background: #cd7f32; color: #000; }
+.tier-4 { background: var(--dim); color: var(--text); }
+.tier-5 { background: transparent; color: var(--dim); }
+
+.draft-btn {
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: bold;
+}
+.draft-btn:hover { background: var(--accent); color: #000; }
+.mark-btn {
+  padding: 1px 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  opacity: 0.4;
+}
+.mark-btn:hover { opacity: 1; }
+.mark-btn.marked { opacity: 1; }
+
+/* RIGHT PANEL - LEAGUE */
+.league-panel {
+  background: var(--surface);
+  overflow-y: auto;
+  padding: 10px;
+}
+.team-card {
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  background: var(--card);
+  border-radius: 4px;
+  cursor: pointer;
+  border-left: 3px solid var(--dim);
+  transition: all .15s;
+}
+.team-card:hover { border-left-color: var(--accent); }
+.team-card.my-team { border-left-color: var(--accent); background: rgba(0,212,170,0.05); }
+.team-card-header { display: flex; justify-content: space-between; align-items: center; }
+.team-name { font-size: 11px; font-weight: bold; }
+.team-budget { font-size: 12px; font-weight: bold; color: var(--green); }
+.team-meta { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); margin-top: 2px; }
+.team-grade { font-weight: bold; }
+.grade-A { color: var(--green); }
+.grade-B { color: var(--blue); }
+.grade-C { color: var(--warn); }
+.grade-D { color: var(--danger); }
+.grade-F { color: var(--red); }
+
+.team-detail {
+  display: none;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+}
+.team-card.expanded .team-detail { display: block; }
+.team-roster-mini { color: var(--muted); line-height: 1.6; }
+
+.inflation-box {
+  margin-top: 12px;
+  padding: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.inflation-label { font-size: 9px; color: var(--muted); text-transform: uppercase; }
+.inflation-value { font-size: 20px; font-weight: bold; margin: 4px 0; }
+.inflation-desc { font-size: 9px; color: var(--muted); }
+
+/* BOTTOM - STRATEGY BAR */
+.strategy-bar {
+  grid-column: 1 / -1;
+  background: var(--surface);
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  max-height: 140px;
+  overflow-y: auto;
+}
+.strat-section { flex: 1; min-width: 200px; }
+.strat-title { font-size: 9px; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.strat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  font-size: 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  margin-bottom: 2px;
+}
+.strat-item:hover { background: rgba(255,255,255,0.05); }
+.strat-tag {
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-size: 8px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+.tag-drain { background: var(--danger); color: #fff; }
+.tag-target { background: var(--green); color: #000; }
+.tag-chaos { background: var(--purple); color: #000; }
+.tag-value { background: var(--blue); color: #000; }
+.tag-run { background: var(--warn); color: #000; }
+
+/* MODALS */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 100;
+  justify-content: center;
+  align-items: center;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 360px;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.modal h2 { font-size: 14px; color: var(--accent); margin-bottom: 12px; }
+.modal-field { margin-bottom: 10px; }
+.modal-field label { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+.modal-field input, .modal-field select {
+  width: 100%;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  font-size: 13px;
+}
+.modal-field input:focus, .modal-field select:focus { outline: none; border-color: var(--accent); }
+.modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+.modal-actions .btn { flex: 1; padding: 10px; font-size: 12px; }
+
+.modal-player-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: var(--surface);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+.modal-player-name { font-size: 16px; font-weight: bold; }
+.modal-player-meta { font-size: 11px; color: var(--muted); }
+.modal-player-val { font-size: 14px; color: var(--accent); font-weight: bold; }
+
+.whatif-box {
+  margin-top: 10px;
+  padding: 8px;
+  background: var(--surface);
+  border-radius: 4px;
+  font-size: 10px;
+}
+.whatif-box .label { color: var(--muted); }
+.whatif-box .value { color: var(--accent); font-weight: bold; }
+
+/* SETTINGS MODAL */
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.settings-grid input {
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+/* Toast */
+.toast-container { position: fixed; top: 60px; right: 16px; z-index: 200; }
+.toast {
+  padding: 8px 16px;
+  background: var(--card);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  animation: slideIn .3s ease;
+}
+@keyframes slideIn { from { transform: translateX(100px); opacity:0; } to { transform: translateX(0); opacity:1; } }
+
+/* Your turn banner */
+.your-turn-banner {
+  display: none;
+  padding: 6px 12px;
+  background: linear-gradient(90deg, rgba(255,215,0,0.15), transparent);
+  border-left: 3px solid var(--gold);
+  font-size: 11px;
+  color: var(--gold);
+  font-weight: bold;
+  margin-bottom: 8px;
+  border-radius: 0 4px 4px 0;
+}
+.your-turn-banner.active { display: block; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr auto auto; }
+  .my-team-panel, .league-panel { max-height: 200px; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- HEADER -->
+  <div class="header">
+    <h1>Draft HQ</h1>
+    <div class="header-stats">
+      <div class="stat">
+        <div class="stat-label">My Budget</div>
+        <div class="stat-value money" id="hdr-budget">$200</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Roster</div>
+        <div class="stat-value picks" id="hdr-picks">0/15</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Pick #</div>
+        <div class="stat-value round" id="hdr-pick">1</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Nominator</div>
+        <div class="stat-value" id="hdr-nominator" style="font-size:12px;">--</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">$/Slot Left</div>
+        <div class="stat-value" id="hdr-perslot" style="color:var(--warn)">$13</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-danger" onclick="undoLastPick()">Undo</button>
+      <button class="btn btn-warn" onclick="openSettings()">Setup</button>
+      <button class="btn" onclick="saveState()">Save</button>
+      <button class="btn" onclick="loadState()">Load</button>
+      <button class="btn" onclick="resetDraft()">Reset</button>
+    </div>
+  </div>
+
+  <!-- LEFT: MY TEAM -->
+  <div class="my-team-panel" id="my-team-panel">
+    <div class="panel-title">My Team</div>
+    <div id="my-roster"></div>
+    <div class="needs-section">
+      <div class="panel-title" style="margin-top:8px;">Needs</div>
+      <div id="my-needs"></div>
+    </div>
+    <div class="budget-bar">
+      <div class="panel-title" style="margin-top:8px;">Budget</div>
+      <div class="budget-breakdown" id="budget-breakdown"></div>
+      <div class="budget-visual" id="budget-visual"></div>
+    </div>
+    <div class="strategy-box" id="allocation-advice"></div>
+  </div>
+
+  <!-- CENTER: PLAYER BOARD -->
+  <div class="player-board">
+    <div class="board-controls">
+      <input type="text" class="search-box" id="search" placeholder="Search players..." oninput="renderBoard()">
+      <div class="pos-filters">
+        <button class="pos-btn active" data-pos="ALL" onclick="setFilter('ALL',this)">ALL</button>
+        <button class="pos-btn" data-pos="QB" onclick="setFilter('QB',this)">QB</button>
+        <button class="pos-btn" data-pos="RB" onclick="setFilter('RB',this)">RB</button>
+        <button class="pos-btn" data-pos="WR" onclick="setFilter('WR',this)">WR</button>
+        <button class="pos-btn" data-pos="TE" onclick="setFilter('TE',this)">TE</button>
+        <button class="pos-btn" data-pos="K" onclick="setFilter('K',this)">K</button>
+        <button class="pos-btn" data-pos="DST" onclick="setFilter('DST',this)">DST</button>
+      </div>
+      <div class="view-toggle">
+        <button class="pos-btn" onclick="toggleAvailOnly()" id="avail-toggle">Avail</button>
+        <button class="pos-btn" onclick="toggleTargets()" id="target-toggle">Targets</button>
+      </div>
+    </div>
+    <div class="player-table-wrap">
+      <table class="player-table">
+        <thead>
+          <tr>
+            <th style="width:20px;"></th>
+            <th onclick="sortBy('rank')" id="th-rank" class="sorted">RK</th>
+            <th onclick="sortBy('name')">Player</th>
+            <th onclick="sortBy('pos')">Pos</th>
+            <th onclick="sortBy('team')">Team</th>
+            <th onclick="sortBy('bye')">Bye</th>
+            <th onclick="sortBy('val')" id="th-val">Value</th>
+            <th onclick="sortBy('adj')" id="th-adj">Adj $</th>
+            <th onclick="sortBy('pts')">Pts</th>
+            <th onclick="sortBy('tier')">Tier</th>
+            <th style="width:60px;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="player-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RIGHT: LEAGUE -->
+  <div class="league-panel" id="league-panel">
+    <div class="panel-title">League</div>
+    <div id="league-teams"></div>
+    <div class="inflation-box" id="inflation-box">
+      <div class="inflation-label">Market Inflation</div>
+      <div class="inflation-value" id="inflation-value">1.00x</div>
+      <div class="inflation-desc" id="inflation-desc">Neutral - draft just started</div>
+    </div>
+  </div>
+
+  <!-- BOTTOM: STRATEGY BAR -->
+  <div class="strategy-bar" id="strategy-bar"></div>
+</div>
+
+<!-- DRAFT MODAL -->
+<div class="modal-overlay" id="draft-modal">
+  <div class="modal">
+    <h2>Draft Player</h2>
+    <div class="modal-player-info" id="draft-player-info"></div>
+    <div class="modal-field">
+      <label>Winning Team</label>
+      <select id="draft-team-select"></select>
+    </div>
+    <div class="modal-field">
+      <label>Price ($)</label>
+      <input type="number" id="draft-price" min="1" max="200" value="1">
+    </div>
+    <div class="whatif-box" id="whatif-box"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeDraftModal()">Cancel</button>
+      <button class="btn btn-accent" onclick="confirmDraft()">Confirm Draft</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal" style="min-width:450px;">
+    <h2>Draft Setup</h2>
+    <div class="modal-field">
+      <label>Your Team Number (1-10)</label>
+      <input type="number" id="set-my-team" min="1" max="10" value="1">
+    </div>
+    <div class="modal-field">
+      <label>Team Names</label>
+      <div class="settings-grid" id="team-names-grid"></div>
+    </div>
+    <div class="modal-field">
+      <label>Nomination Order (comma-separated team numbers, e.g. 1,2,3,4,5,6,7,8,9,10)</label>
+      <input type="text" id="set-nom-order" value="1,2,3,4,5,6,7,8,9,10">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeSettings()">Cancel</button>
+      <button class="btn btn-accent" onclick="applySettings()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEAM DETAIL MODAL -->
+<div class="modal-overlay" id="team-detail-modal">
+  <div class="modal" style="min-width:400px;">
+    <h2 id="team-detail-title">Team Detail</h2>
+    <div id="team-detail-content"></div>
+    <div class="modal-actions">
+      <button class="btn btn-accent" onclick="closeTeamDetail()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ===========================
+// PLAYER DATABASE - 2026 PROJECTIONS
+// Half PPR, 10-team, $200 budget
+// ===========================
+const PLAYERS = [
+  // --- RUNNING BACKS ---
+  {id:1,name:"Bijan Robinson",team:"ATL",pos:"RB",bye:12,pts:305,val:68,tier:1},
+  {id:2,name:"Breece Hall",team:"NYJ",pos:"RB",bye:12,pts:280,val:58,tier:1},
+  {id:3,name:"Jahmyr Gibbs",team:"DET",pos:"RB",bye:5,pts:275,val:55,tier:1},
+  {id:4,name:"De'Von Achane",team:"MIA",pos:"RB",bye:6,pts:268,val:50,tier:1},
+  {id:5,name:"Saquon Barkley",team:"PHI",pos:"RB",bye:5,pts:260,val:48,tier:1},
+  {id:6,name:"Jonathan Taylor",team:"IND",pos:"RB",bye:14,pts:255,val:44,tier:2},
+  {id:7,name:"Kyren Williams",team:"LAR",pos:"RB",bye:6,pts:245,val:36,tier:2},
+  {id:8,name:"Josh Jacobs",team:"GB",pos:"RB",bye:10,pts:240,val:32,tier:2},
+  {id:9,name:"Travis Etienne",team:"JAX",pos:"RB",bye:12,pts:232,val:26,tier:2},
+  {id:10,name:"Isiah Pacheco",team:"KC",pos:"RB",bye:6,pts:225,val:22,tier:3},
+  {id:11,name:"Derrick Henry",team:"BAL",pos:"RB",bye:14,pts:220,val:18,tier:3},
+  {id:12,name:"James Cook",team:"BUF",pos:"RB",bye:12,pts:215,val:16,tier:3},
+  {id:13,name:"Najee Harris",team:"PIT",pos:"RB",bye:9,pts:208,val:12,tier:3},
+  {id:14,name:"Kenneth Walker III",team:"SEA",pos:"RB",bye:10,pts:205,val:11,tier:3},
+  {id:15,name:"Rhamondre Stevenson",team:"NE",pos:"RB",bye:14,pts:198,val:9,tier:4},
+  {id:16,name:"Tony Pollard",team:"TEN",pos:"RB",bye:5,pts:192,val:7,tier:4},
+  {id:17,name:"D'Andre Swift",team:"CHI",pos:"RB",bye:7,pts:188,val:6,tier:4},
+  {id:18,name:"Raheem Mostert",team:"MIA",pos:"RB",bye:6,pts:182,val:5,tier:4},
+  {id:19,name:"Aaron Jones",team:"MIN",pos:"RB",bye:6,pts:178,val:4,tier:4},
+  {id:20,name:"Javonte Williams",team:"DEN",pos:"RB",bye:14,pts:172,val:3,tier:5},
+  {id:21,name:"Zack Moss",team:"CIN",pos:"RB",bye:12,pts:168,val:3,tier:5},
+  {id:22,name:"Rachaad White",team:"TB",pos:"RB",bye:11,pts:165,val:3,tier:5},
+  {id:23,name:"Rico Dowdle",team:"DAL",pos:"RB",bye:7,pts:162,val:2,tier:5},
+  {id:24,name:"Chuba Hubbard",team:"CAR",pos:"RB",bye:7,pts:158,val:2,tier:5},
+  {id:25,name:"Jerome Ford",team:"CLE",pos:"RB",bye:10,pts:155,val:2,tier:5},
+  {id:26,name:"Chase Brown",team:"CIN",pos:"RB",bye:12,pts:152,val:2,tier:5},
+  {id:27,name:"Tyjae Spears",team:"TEN",pos:"RB",bye:5,pts:148,val:1,tier:5},
+  {id:28,name:"Tyler Allgeier",team:"ATL",pos:"RB",bye:12,pts:145,val:1,tier:5},
+  {id:29,name:"Alexander Mattison",team:"LV",pos:"RB",bye:10,pts:140,val:1,tier:5},
+  {id:30,name:"Jaylen Warren",team:"PIT",pos:"RB",bye:9,pts:138,val:1,tier:5},
+  {id:31,name:"Gus Edwards",team:"LAC",pos:"RB",bye:5,pts:135,val:1,tier:5},
+  {id:32,name:"Tank Bigsby",team:"JAX",pos:"RB",bye:12,pts:132,val:1,tier:5},
+  {id:33,name:"Trey Benson",team:"ARI",pos:"RB",bye:11,pts:130,val:1,tier:5},
+  {id:34,name:"Roschon Johnson",team:"CHI",pos:"RB",bye:7,pts:125,val:1,tier:5},
+  {id:35,name:"Deuce Vaughn",team:"DAL",pos:"RB",bye:7,pts:118,val:1,tier:5},
+
+  // --- WIDE RECEIVERS ---
+  {id:40,name:"Ja'Marr Chase",team:"CIN",pos:"WR",bye:12,pts:298,val:65,tier:1},
+  {id:41,name:"CeeDee Lamb",team:"DAL",pos:"WR",bye:7,pts:290,val:60,tier:1},
+  {id:42,name:"Amon-Ra St. Brown",team:"DET",pos:"WR",bye:5,pts:282,val:55,tier:1},
+  {id:43,name:"Puka Nacua",team:"LAR",pos:"WR",bye:6,pts:272,val:49,tier:1},
+  {id:44,name:"Malik Nabers",team:"NYG",pos:"WR",bye:11,pts:268,val:45,tier:1},
+  {id:45,name:"Tyreek Hill",team:"MIA",pos:"WR",bye:6,pts:260,val:40,tier:2},
+  {id:46,name:"Marvin Harrison Jr.",team:"ARI",pos:"WR",bye:11,pts:255,val:38,tier:2},
+  {id:47,name:"A.J. Brown",team:"PHI",pos:"WR",bye:5,pts:250,val:34,tier:2},
+  {id:48,name:"Nico Collins",team:"HOU",pos:"WR",bye:14,pts:245,val:28,tier:2},
+  {id:49,name:"Garrett Wilson",team:"NYJ",pos:"WR",bye:12,pts:240,val:25,tier:2},
+  {id:50,name:"Chris Olave",team:"NO",pos:"WR",bye:12,pts:235,val:22,tier:3},
+  {id:51,name:"Drake London",team:"ATL",pos:"WR",bye:12,pts:230,val:19,tier:3},
+  {id:52,name:"Davante Adams",team:"NYJ",pos:"WR",bye:12,pts:225,val:16,tier:3},
+  {id:53,name:"DeVonta Smith",team:"PHI",pos:"WR",bye:5,pts:222,val:14,tier:3},
+  {id:54,name:"Jaylen Waddle",team:"MIA",pos:"WR",bye:6,pts:218,val:12,tier:3},
+  {id:55,name:"DK Metcalf",team:"SEA",pos:"WR",bye:10,pts:215,val:9,tier:4},
+  {id:56,name:"Brian Thomas Jr.",team:"JAX",pos:"WR",bye:12,pts:212,val:8,tier:4},
+  {id:57,name:"Zay Flowers",team:"BAL",pos:"WR",bye:14,pts:208,val:7,tier:4},
+  {id:58,name:"Terry McLaurin",team:"WAS",pos:"WR",bye:14,pts:205,val:6,tier:4},
+  {id:59,name:"Calvin Ridley",team:"TEN",pos:"WR",bye:5,pts:200,val:5,tier:4},
+  {id:60,name:"DJ Moore",team:"CHI",pos:"WR",bye:7,pts:198,val:4,tier:4},
+  {id:61,name:"George Pickens",team:"PIT",pos:"WR",bye:9,pts:195,val:4,tier:4},
+  {id:62,name:"Tee Higgins",team:"CIN",pos:"WR",bye:12,pts:192,val:4,tier:4},
+  {id:63,name:"Mike Evans",team:"TB",pos:"WR",bye:11,pts:190,val:3,tier:5},
+  {id:64,name:"Keenan Allen",team:"CHI",pos:"WR",bye:7,pts:185,val:3,tier:5},
+  {id:65,name:"Stefon Diggs",team:"HOU",pos:"WR",bye:14,pts:182,val:2,tier:5},
+  {id:66,name:"Brandon Aiyuk",team:"SF",pos:"WR",bye:9,pts:180,val:2,tier:5},
+  {id:67,name:"Rashee Rice",team:"KC",pos:"WR",bye:6,pts:178,val:2,tier:5},
+  {id:68,name:"Michael Pittman Jr.",team:"IND",pos:"WR",bye:14,pts:175,val:2,tier:5},
+  {id:69,name:"Tank Dell",team:"HOU",pos:"WR",bye:14,pts:172,val:2,tier:5},
+  {id:70,name:"Ladd McConkey",team:"LAC",pos:"WR",bye:5,pts:170,val:2,tier:5},
+  {id:71,name:"Jaxon Smith-Njigba",team:"SEA",pos:"WR",bye:10,pts:168,val:1,tier:5},
+  {id:72,name:"Romeo Doubs",team:"GB",pos:"WR",bye:10,pts:165,val:1,tier:5},
+  {id:73,name:"Christian Watson",team:"GB",pos:"WR",bye:10,pts:162,val:1,tier:5},
+  {id:74,name:"Khalil Shakir",team:"BUF",pos:"WR",bye:12,pts:160,val:1,tier:5},
+  {id:75,name:"Quentin Johnston",team:"LAC",pos:"WR",bye:5,pts:155,val:1,tier:5},
+  {id:76,name:"Rashid Shaheed",team:"NO",pos:"WR",bye:12,pts:150,val:1,tier:5},
+  {id:77,name:"Josh Downs",team:"IND",pos:"WR",bye:14,pts:148,val:1,tier:5},
+  {id:78,name:"Jakobi Meyers",team:"LV",pos:"WR",bye:10,pts:145,val:1,tier:5},
+  {id:79,name:"Curtis Samuel",team:"BUF",pos:"WR",bye:12,pts:140,val:1,tier:5},
+  {id:80,name:"Dontayvion Wicks",team:"GB",pos:"WR",bye:10,pts:138,val:1,tier:5},
+
+  // --- QUARTERBACKS ---
+  {id:100,name:"Josh Allen",team:"BUF",pos:"QB",bye:12,pts:395,val:28,tier:1},
+  {id:101,name:"Jalen Hurts",team:"PHI",pos:"QB",bye:5,pts:385,val:22,tier:1},
+  {id:102,name:"Lamar Jackson",team:"BAL",pos:"QB",bye:14,pts:380,val:18,tier:2},
+  {id:103,name:"Joe Burrow",team:"CIN",pos:"QB",bye:12,pts:365,val:12,tier:2},
+  {id:104,name:"Patrick Mahomes",team:"KC",pos:"QB",bye:6,pts:360,val:10,tier:2},
+  {id:105,name:"C.J. Stroud",team:"HOU",pos:"QB",bye:14,pts:355,val:8,tier:3},
+  {id:106,name:"Jayden Daniels",team:"WAS",pos:"QB",bye:14,pts:350,val:7,tier:3},
+  {id:107,name:"Anthony Richardson",team:"IND",pos:"QB",bye:14,pts:340,val:5,tier:3},
+  {id:108,name:"Caleb Williams",team:"CHI",pos:"QB",bye:7,pts:335,val:4,tier:4},
+  {id:109,name:"Drake Maye",team:"NE",pos:"QB",bye:14,pts:325,val:3,tier:4},
+  {id:110,name:"Kyler Murray",team:"ARI",pos:"QB",bye:11,pts:320,val:2,tier:4},
+  {id:111,name:"Dak Prescott",team:"DAL",pos:"QB",bye:7,pts:315,val:2,tier:4},
+  {id:112,name:"Brock Purdy",team:"SF",pos:"QB",bye:9,pts:310,val:1,tier:5},
+  {id:113,name:"Jordan Love",team:"GB",pos:"QB",bye:10,pts:308,val:1,tier:5},
+  {id:114,name:"Tua Tagovailoa",team:"MIA",pos:"QB",bye:6,pts:305,val:1,tier:5},
+  {id:115,name:"Justin Herbert",team:"LAC",pos:"QB",bye:5,pts:302,val:1,tier:5},
+  {id:116,name:"Geno Smith",team:"SEA",pos:"QB",bye:10,pts:295,val:1,tier:5},
+  {id:117,name:"Sam Darnold",team:"MIN",pos:"QB",bye:6,pts:290,val:1,tier:5},
+  {id:118,name:"Russell Wilson",team:"PIT",pos:"QB",bye:9,pts:285,val:1,tier:5},
+  {id:119,name:"Matthew Stafford",team:"LAR",pos:"QB",bye:6,pts:280,val:1,tier:5},
+
+  // --- TIGHT ENDS ---
+  {id:130,name:"Brock Bowers",team:"LV",pos:"TE",bye:10,pts:215,val:28,tier:1},
+  {id:131,name:"Sam LaPorta",team:"DET",pos:"TE",bye:5,pts:195,val:18,tier:1},
+  {id:132,name:"Trey McBride",team:"ARI",pos:"TE",bye:11,pts:188,val:14,tier:2},
+  {id:133,name:"George Kittle",team:"SF",pos:"TE",bye:9,pts:180,val:8,tier:2},
+  {id:134,name:"Dallas Goedert",team:"PHI",pos:"TE",bye:5,pts:172,val:5,tier:3},
+  {id:135,name:"Mark Andrews",team:"BAL",pos:"TE",bye:14,pts:168,val:4,tier:3},
+  {id:136,name:"Kyle Pitts",team:"ATL",pos:"TE",bye:12,pts:165,val:3,tier:4},
+  {id:137,name:"David Njoku",team:"CLE",pos:"TE",bye:10,pts:160,val:2,tier:4},
+  {id:138,name:"Dalton Kincaid",team:"BUF",pos:"TE",bye:12,pts:158,val:2,tier:4},
+  {id:139,name:"Evan Engram",team:"JAX",pos:"TE",bye:12,pts:155,val:1,tier:5},
+  {id:140,name:"Cole Kmet",team:"CHI",pos:"TE",bye:7,pts:150,val:1,tier:5},
+  {id:141,name:"Jake Ferguson",team:"DAL",pos:"TE",bye:7,pts:148,val:1,tier:5},
+  {id:142,name:"Pat Freiermuth",team:"PIT",pos:"TE",bye:9,pts:145,val:1,tier:5},
+  {id:143,name:"Isaiah Likely",team:"BAL",pos:"TE",bye:14,pts:142,val:1,tier:5},
+  {id:144,name:"Cade Otton",team:"TB",pos:"TE",bye:11,pts:140,val:1,tier:5},
+  {id:145,name:"Hunter Henry",team:"NE",pos:"TE",bye:14,pts:135,val:1,tier:5},
+
+  // --- KICKERS ---
+  {id:160,name:"Harrison Butker",team:"KC",pos:"K",bye:6,pts:148,val:1,tier:3},
+  {id:161,name:"Brandon Aubrey",team:"DAL",pos:"K",bye:7,pts:152,val:1,tier:3},
+  {id:162,name:"Justin Tucker",team:"BAL",pos:"K",bye:14,pts:140,val:1,tier:3},
+  {id:163,name:"Tyler Bass",team:"BUF",pos:"K",bye:12,pts:138,val:1,tier:4},
+  {id:164,name:"Evan McPherson",team:"CIN",pos:"K",bye:12,pts:136,val:1,tier:4},
+  {id:165,name:"Jake Elliott",team:"PHI",pos:"K",bye:5,pts:134,val:1,tier:4},
+  {id:166,name:"Chris Boswell",team:"PIT",pos:"K",bye:9,pts:132,val:1,tier:4},
+  {id:167,name:"Jason Sanders",team:"MIA",pos:"K",bye:6,pts:130,val:1,tier:5},
+  {id:168,name:"Matt Gay",team:"IND",pos:"K",bye:14,pts:128,val:1,tier:5},
+  {id:169,name:"Daniel Carlson",team:"LV",pos:"K",bye:10,pts:126,val:1,tier:5},
+  {id:170,name:"Ka'imi Fairbairn",team:"HOU",pos:"K",bye:14,pts:125,val:1,tier:5},
+  {id:171,name:"Younghoe Koo",team:"ATL",pos:"K",bye:12,pts:124,val:1,tier:5},
+
+  // --- DEFENSE/SPECIAL TEAMS ---
+  {id:180,name:"49ers",team:"SF",pos:"DST",bye:9,pts:135,val:2,tier:3},
+  {id:181,name:"Cowboys",team:"DAL",pos:"DST",bye:7,pts:132,val:2,tier:3},
+  {id:182,name:"Browns",team:"CLE",pos:"DST",bye:10,pts:130,val:2,tier:3},
+  {id:183,name:"Jets",team:"NYJ",pos:"DST",bye:12,pts:128,val:2,tier:3},
+  {id:184,name:"Bills",team:"BUF",pos:"DST",bye:12,pts:125,val:1,tier:4},
+  {id:185,name:"Steelers",team:"PIT",pos:"DST",bye:9,pts:122,val:1,tier:4},
+  {id:186,name:"Ravens",team:"BAL",pos:"DST",bye:14,pts:120,val:1,tier:4},
+  {id:187,name:"Dolphins",team:"MIA",pos:"DST",bye:6,pts:118,val:1,tier:4},
+  {id:188,name:"Eagles",team:"PHI",pos:"DST",bye:5,pts:115,val:1,tier:5},
+  {id:189,name:"Chiefs",team:"KC",pos:"DST",bye:6,pts:112,val:1,tier:5},
+  {id:190,name:"Chargers",team:"LAC",pos:"DST",bye:5,pts:110,val:1,tier:5},
+  {id:191,name:"Bears",team:"CHI",pos:"DST",bye:7,pts:108,val:1,tier:5}
+];
+
+// ===========================
+// STATE
+// ===========================
+const ROSTER_SLOTS = {QB:1,RB:2,WR:2,TE:1,FLEX:1,K:1,DST:1,BN:6};
+const TOTAL_SLOTS = 15;
+const BUDGET = 200;
+const NUM_TEAMS = 10;
+const FLEX_POS = ['RB','WR','TE'];
+
+let state = {
+  myTeamId: 0,
+  teams: [],
+  picks: [],
+  posFilter: 'ALL',
+  sortField: 'rank',
+  sortDir: 1,
+  showAvailOnly: false,
+  showTargetsOnly: false,
+  targets: new Set(),
+  avoids: new Set(),
+  nominationOrder: [0,1,2,3,4,5,6,7,8,9],
+  currentNomIdx: 0,
+  pickNumber: 0
+};
+
+function initTeams() {
+  state.teams = [];
+  for (let i = 0; i < NUM_TEAMS; i++) {
+    state.teams.push({
+      id: i,
+      name: i === 0 ? 'My Team' : `Team ${i+1}`,
+      budget: BUDGET,
+      players: []
+    });
+  }
+}
+
+function getTeamRoster(team) {
+  const r = {QB:[],RB:[],WR:[],TE:[],FLEX:[],K:[],DST:[],BN:[]};
+  team.players.forEach(p => {
+    const pos = p.player.pos;
+    if (pos === 'K' && r.K.length < 1) r.K.push(p);
+    else if (pos === 'DST' && r.DST.length < 1) r.DST.push(p);
+    else if (pos === 'QB' && r.QB.length < 1) r.QB.push(p);
+    else if (pos === 'RB' && r.RB.length < 2) r.RB.push(p);
+    else if (pos === 'WR' && r.WR.length < 2) r.WR.push(p);
+    else if (pos === 'TE' && r.TE.length < 1) r.TE.push(p);
+    else if (FLEX_POS.includes(pos) && r.FLEX.length < 1) r.FLEX.push(p);
+    else r.BN.push(p);
+  });
+  return r;
+}
+
+function getTeamNeeds(team) {
+  const r = getTeamRoster(team);
+  const filled = team.players.length;
+  const needs = {};
+  needs.QB = Math.max(0, 1 - r.QB.length);
+  needs.RB = Math.max(0, 2 - r.RB.length);
+  needs.WR = Math.max(0, 2 - r.WR.length);
+  needs.TE = Math.max(0, 1 - r.TE.length);
+  needs.FLEX = Math.max(0, 1 - r.FLEX.length);
+  needs.K = Math.max(0, 1 - r.K.length);
+  needs.DST = Math.max(0, 1 - r.DST.length);
+  needs.BN = Math.max(0, TOTAL_SLOTS - filled);
+  return needs;
+}
+
+function getAvailablePlayers() {
+  const draftedIds = new Set(state.picks.map(p => p.player.id));
+  return PLAYERS.filter(p => !draftedIds.has(p.id));
+}
+
+function isDrafted(pid) {
+  return state.picks.some(p => p.player.id === pid);
+}
+
+function isDraftedByMe(pid) {
+  return state.picks.some(p => p.player.id === pid && p.teamId === state.myTeamId);
+}
+
+// ===========================
+// VALUE CALCULATIONS
+// ===========================
+function calcInflation() {
+  const avail = getAvailablePlayers();
+  const totalRemBudget = state.teams.reduce((s, t) => s + t.budget, 0);
+  const totalRemSlots = state.teams.reduce((s, t) => s + (TOTAL_SLOTS - t.players.length), 0);
+  const spendable = totalRemBudget - totalRemSlots;
+  const totalRemValue = avail.reduce((s, p) => s + Math.max(0, p.val - 1), 0);
+  if (totalRemValue <= 0) return 1;
+  return Math.max(0.5, Math.min(3, spendable / totalRemValue));
+}
+
+function getAdjustedValue(player) {
+  const inf = calcInflation();
+  const premium = player.val - 1;
+  return Math.max(1, Math.round(premium * inf + 1));
+}
+
+function getMaxBid(team) {
+  const slotsLeft = TOTAL_SLOTS - team.players.length;
+  if (slotsLeft <= 0) return 0;
+  return team.budget - (slotsLeft - 1);
+}
+
+function getPerSlot(team) {
+  const slotsLeft = TOTAL_SLOTS - team.players.length;
+  if (slotsLeft <= 0) return 0;
+  return Math.floor(team.budget / slotsLeft);
+}
+
+// ===========================
+// DRAFT GRADES
+// ===========================
+function calcDraftGrade(team) {
+  if (team.players.length === 0) return {grade:'--',score:0,valueRatio:0};
+  let totalVal = 0, totalSpent = 0;
+  team.players.forEach(p => {
+    totalVal += getAdjustedValue(p.player);
+    totalSpent += p.price;
+  });
+  const valueRatio = totalSpent > 0 ? totalVal / totalSpent : 1;
+  const posBalance = calcPosBalance(team);
+  const score = (valueRatio * 0.7 + posBalance * 0.3) * 100;
+
+  let grade;
+  if (score >= 115) grade = 'A+';
+  else if (score >= 105) grade = 'A';
+  else if (score >= 95) grade = 'A-';
+  else if (score >= 88) grade = 'B+';
+  else if (score >= 80) grade = 'B';
+  else if (score >= 72) grade = 'B-';
+  else if (score >= 65) grade = 'C+';
+  else if (score >= 55) grade = 'C';
+  else if (score >= 45) grade = 'C-';
+  else if (score >= 35) grade = 'D';
+  else grade = 'F';
+
+  return {grade, score: Math.round(score), valueRatio: valueRatio.toFixed(2)};
+}
+
+function calcPosBalance(team) {
+  const r = getTeamRoster(team);
+  let score = 1;
+  if (r.QB.length >= 1) score += 0.1;
+  if (r.RB.length >= 2) score += 0.15;
+  if (r.WR.length >= 2) score += 0.15;
+  if (r.TE.length >= 1) score += 0.1;
+  if (r.FLEX.length >= 1) score += 0.05;
+  if (r.K.length >= 1) score += 0.02;
+  if (r.DST.length >= 1) score += 0.02;
+  return Math.min(1.5, score);
+}
+
+// ===========================
+// NOMINATION STRATEGY ENGINE
+// ===========================
+function getNominationSuggestions() {
+  const avail = getAvailablePlayers();
+  const myTeam = state.teams[state.myTeamId];
+  const myNeeds = getTeamNeeds(myTeam);
+  const myMaxBid = getMaxBid(myTeam);
+  const inf = calcInflation();
+  const suggestions = [];
+
+  const opponents = state.teams.filter(t => t.id !== state.myTeamId);
+  const oppNeedMap = {};
+  opponents.forEach(t => { oppNeedMap[t.id] = getTeamNeeds(t); });
+
+  avail.forEach(player => {
+    const adjVal = getAdjustedValue(player);
+    const pos = player.pos;
+
+    let oppDemand = 0;
+    opponents.forEach(t => {
+      const needs = oppNeedMap[t.id];
+      if (pos === 'QB' && needs.QB > 0) oppDemand++;
+      else if (pos === 'RB' && (needs.RB > 0 || needs.FLEX > 0)) oppDemand++;
+      else if (pos === 'WR' && (needs.WR > 0 || needs.FLEX > 0)) oppDemand++;
+      else if (pos === 'TE' && (needs.TE > 0 || needs.FLEX > 0)) oppDemand++;
+      else if (pos === 'K' && needs.K > 0) oppDemand++;
+      else if (pos === 'DST' && needs.DST > 0) oppDemand++;
+    });
+
+    const iNeed = (pos === 'QB' && myNeeds.QB > 0) ||
+                  (pos === 'RB' && (myNeeds.RB > 0 || myNeeds.FLEX > 0)) ||
+                  (pos === 'WR' && (myNeeds.WR > 0 || myNeeds.FLEX > 0)) ||
+                  (pos === 'TE' && (myNeeds.TE > 0 || myNeeds.FLEX > 0)) ||
+                  (pos === 'K' && myNeeds.K > 0) ||
+                  (pos === 'DST' && myNeeds.DST > 0);
+
+    const hype = player.tier <= 2 ? 2 : player.tier <= 3 ? 1.5 : 1;
+
+    // DRAIN: high value, I DON'T need, opponents DO need
+    if (!iNeed && oppDemand >= 3 && adjVal >= 15) {
+      suggestions.push({
+        player, type: 'drain', tag: 'DRAIN',
+        reason: `${oppDemand} teams need ${pos} - force a bidding war`,
+        score: oppDemand * hype * adjVal * 0.5
+      });
+    }
+
+    // OVERRATED: QB/TE that opponents will overpay for (name value > actual value)
+    if ((pos === 'QB' || pos === 'TE') && !iNeed && adjVal >= 10 && player.tier <= 2) {
+      suggestions.push({
+        player, type: 'drain', tag: 'DRAIN',
+        reason: `Elite ${pos} hype - opponents will overbid`,
+        score: adjVal * hype * 3
+      });
+    }
+
+    // VALUE TARGET: I need, opponents are cash-strapped, good adjusted value
+    if (iNeed && adjVal <= myMaxBid) {
+      const cashStrapped = opponents.filter(t => getPerSlot(t) < adjVal * 0.8).length;
+      if (cashStrapped >= 3 || adjVal <= 5) {
+        suggestions.push({
+          player, type: 'target', tag: 'TARGET',
+          reason: `${cashStrapped} teams can't afford to outbid you`,
+          score: (adjVal / Math.max(1, player.val)) * 100 + (iNeed ? 50 : 0)
+        });
+      }
+    }
+
+    // POSITIONAL RUN: if a top player at a position was just taken, nominate #2
+    if (state.picks.length > 0) {
+      const lastPick = state.picks[state.picks.length - 1];
+      if (lastPick.player.pos === pos && lastPick.player.tier <= 2 && player.tier <= 2 && !iNeed) {
+        suggestions.push({
+          player, type: 'run', tag: 'RUN',
+          reason: `${lastPick.player.name} just went - trigger ${pos} panic`,
+          score: adjVal * 4
+        });
+      }
+    }
+
+    // CHAOS: nominate K/DST early
+    if ((pos === 'K' || pos === 'DST') && state.pickNumber < 40 && !iNeed) {
+      suggestions.push({
+        player, type: 'chaos', tag: 'CHAOS',
+        reason: `Early ${pos} nomination - waste time, confuse opponents`,
+        score: 30 - state.pickNumber * 0.5
+      });
+    }
+  });
+
+  // Sort by score and deduplicate
+  suggestions.sort((a, b) => b.score - a.score);
+  const seen = new Set();
+  const unique = [];
+  for (const s of suggestions) {
+    if (!seen.has(s.player.id) && unique.length < 8) {
+      seen.add(s.player.id);
+      unique.push(s);
+    }
+  }
+  return unique;
+}
+
+function getBestAvailable(pos) {
+  const avail = getAvailablePlayers();
+  let filtered = pos === 'ALL' ? avail : avail.filter(p => p.pos === pos);
+  filtered = filtered.map(p => ({...p, adjVal: getAdjustedValue(p)}));
+  filtered.sort((a, b) => b.adjVal - a.adjVal);
+  return filtered.slice(0, 10);
+}
+
+function getAllocationAdvice() {
+  const myTeam = state.teams[state.myTeamId];
+  const needs = getTeamNeeds(myTeam);
+  const budget = myTeam.budget;
+  const slotsLeft = TOTAL_SLOTS - myTeam.players.length;
+  if (slotsLeft <= 0) return "Roster complete.";
+
+  const mustFill = needs.QB + needs.RB + needs.WR + needs.TE + needs.K + needs.DST + needs.FLEX;
+  const benchLeft = Math.max(0, slotsLeft - mustFill);
+  const reservedForMinBids = (benchLeft + needs.K + needs.DST) * 1;
+  const spendable = budget - reservedForMinBids - (mustFill - needs.K - needs.DST);
+
+  let advice = `$${budget} left for ${slotsLeft} slots. `;
+  if (slotsLeft === TOTAL_SLOTS) {
+    advice += "Stars & Scrubs: spend $55-65 on 2 elite RB/WR, $25-35 on 2 more starters, $1-5 on the rest.";
+  } else if (spendable > 50 && mustFill <= 4) {
+    advice += `$${spendable} spendable on ${mustFill} key spots. Go get a stud.`;
+  } else if (spendable < 10 && mustFill > 2) {
+    advice += "Budget tight. Fill needs at $1-3 per slot. Look for sleepers.";
+  } else {
+    advice += `~$${Math.floor(spendable / Math.max(1, mustFill - needs.K - needs.DST))} per starter spot.`;
+  }
+  return advice;
+}
+
+// ===========================
+// DRAFT ACTIONS
+// ===========================
+let draftingPlayerId = null;
+
+function openDraftModal(playerId) {
+  draftingPlayerId = playerId;
+  const player = PLAYERS.find(p => p.id === playerId);
+  if (!player) return;
+
+  const adjVal = getAdjustedValue(player);
+  document.getElementById('draft-player-info').innerHTML = `
+    <span class="pos-badge pos-${player.pos}">${player.pos}</span>
+    <div>
+      <div class="modal-player-name">${player.name}</div>
+      <div class="modal-player-meta">${player.team} | Bye ${player.bye} | Tier ${player.tier}</div>
+    </div>
+    <div style="margin-left:auto; text-align:right;">
+      <div class="modal-player-val">$${adjVal}</div>
+      <div style="font-size:10px;color:var(--muted);">adj. value</div>
+    </div>
+  `;
+
+  const sel = document.getElementById('draft-team-select');
+  sel.innerHTML = state.teams.map(t =>
+    `<option value="${t.id}" ${t.id === state.myTeamId ? '' : ''}>${t.name} ($${t.budget} left)</option>`
+  ).join('');
+
+  document.getElementById('draft-price').value = adjVal;
+  updateWhatIf();
+
+  document.getElementById('draft-modal').classList.add('active');
+  document.getElementById('draft-price').focus();
+}
+
+function closeDraftModal() {
+  document.getElementById('draft-modal').classList.remove('active');
+  draftingPlayerId = null;
+}
+
+function updateWhatIf() {
+  const teamId = parseInt(document.getElementById('draft-team-select').value);
+  const price = parseInt(document.getElementById('draft-price').value) || 1;
+  const team = state.teams[teamId];
+  const slotsLeft = TOTAL_SLOTS - team.players.length;
+  const budgetAfter = team.budget - price;
+  const slotsAfter = slotsLeft - 1;
+  const perSlotAfter = slotsAfter > 0 ? Math.floor(budgetAfter / slotsAfter) : 0;
+  const maxBidAfter = slotsAfter > 0 ? budgetAfter - (slotsAfter - 1) : 0;
+
+  const isMe = teamId === state.myTeamId;
+  const box = document.getElementById('whatif-box');
+
+  if (price > team.budget) {
+    box.innerHTML = `<span style="color:var(--danger);">Over budget! Team only has $${team.budget}.</span>`;
+    return;
+  }
+  if (price > getMaxBid(team)) {
+    box.innerHTML = `<span style="color:var(--danger);">Max bid is $${getMaxBid(team)} (need $1/slot for ${slotsLeft - 1} remaining).</span>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div style="display:flex;gap:20px;">
+      <div><span class="label">After: </span><span class="value">$${budgetAfter}</span> left</div>
+      <div><span class="label">Slots: </span><span class="value">${slotsAfter}</span></div>
+      <div><span class="label">$/Slot: </span><span class="value" style="color:${perSlotAfter < 5 ? 'var(--danger)' : 'var(--accent)'}">$${perSlotAfter}</span></div>
+      <div><span class="label">Max Bid: </span><span class="value">$${maxBidAfter}</span></div>
+    </div>
+  `;
+}
+
+function confirmDraft() {
+  const player = PLAYERS.find(p => p.id === draftingPlayerId);
+  if (!player) return;
+
+  const teamId = parseInt(document.getElementById('draft-team-select').value);
+  const price = parseInt(document.getElementById('draft-price').value) || 1;
+  const team = state.teams[teamId];
+
+  if (price > getMaxBid(team)) {
+    toast(`Over max bid! $${getMaxBid(team)} max for ${team.name}.`, 'danger');
+    return;
+  }
+
+  team.budget -= price;
+  team.players.push({player, price});
+  state.picks.push({player, price, teamId, pickNumber: state.pickNumber});
+  state.pickNumber++;
+  state.currentNomIdx = (state.currentNomIdx + 1) % state.nominationOrder.length;
+
+  closeDraftModal();
+  renderAll();
+  toast(`${player.name} to ${team.name} for $${price}`, 'success');
+  autoSave();
+}
+
+function undoLastPick() {
+  if (state.picks.length === 0) return;
+  const last = state.picks.pop();
+  const team = state.teams[last.teamId];
+  team.budget += last.price;
+  team.players = team.players.filter(p => p.player.id !== last.player.id);
+  state.pickNumber = Math.max(0, state.pickNumber - 1);
+  state.currentNomIdx = (state.currentNomIdx - 1 + state.nominationOrder.length) % state.nominationOrder.length;
+  renderAll();
+  toast(`Undid: ${last.player.name}`, 'warn');
+  autoSave();
+}
+
+// ===========================
+// RENDERING
+// ===========================
+function renderAll() {
+  renderHeader();
+  renderMyTeam();
+  renderBoard();
+  renderLeague();
+  renderStrategy();
+}
+
+function renderHeader() {
+  const myTeam = state.teams[state.myTeamId];
+  const filled = myTeam.players.length;
+  document.getElementById('hdr-budget').textContent = `$${myTeam.budget}`;
+  document.getElementById('hdr-picks').textContent = `${filled}/${TOTAL_SLOTS}`;
+  document.getElementById('hdr-pick').textContent = state.pickNumber + 1;
+  document.getElementById('hdr-perslot').textContent = `$${getPerSlot(myTeam)}`;
+
+  const nomTeamId = state.nominationOrder[state.currentNomIdx];
+  const nomTeam = state.teams[nomTeamId];
+  const nomEl = document.getElementById('hdr-nominator');
+  if (nomTeamId === state.myTeamId) {
+    nomEl.textContent = 'YOUR TURN';
+    nomEl.style.color = 'var(--gold)';
+  } else {
+    nomEl.textContent = nomTeam.name;
+    nomEl.style.color = 'var(--muted)';
+  }
+
+  const perSlot = getPerSlot(myTeam);
+  const psEl = document.getElementById('hdr-perslot');
+  psEl.style.color = perSlot < 5 ? 'var(--danger)' : perSlot < 15 ? 'var(--warn)' : 'var(--accent)';
+}
+
+function renderMyTeam() {
+  const myTeam = state.teams[state.myTeamId];
+  const roster = getTeamRoster(myTeam);
+  const needs = getTeamNeeds(myTeam);
+
+  const slotOrder = [
+    {key:'QB',label:'QB',max:1},{key:'RB',label:'RB',max:2},{key:'WR',label:'WR',max:2},
+    {key:'TE',label:'TE',max:1},{key:'FLEX',label:'FLX',max:1},{key:'K',label:'K',max:1},
+    {key:'DST',label:'DST',max:1},{key:'BN',label:'BN',max:6}
+  ];
+
+  let html = '';
+  slotOrder.forEach(slot => {
+    for (let i = 0; i < slot.max; i++) {
+      const pick = roster[slot.key][i];
+      if (pick) {
+        html += `<div class="roster-slot filled">
+          <span class="slot-pos">${slot.label}</span>
+          <span class="slot-player">${pick.player.name} <span style="color:var(--muted);font-size:9px;">${pick.player.team}</span></span>
+          <span class="slot-price">$${pick.price}</span>
+        </div>`;
+      } else {
+        const isNeed = slot.key !== 'BN';
+        html += `<div class="roster-slot ${isNeed ? 'need' : 'empty'}">
+          <span class="slot-pos">${slot.label}</span>
+          <span class="slot-empty-text">Empty</span>
+        </div>`;
+      }
+    }
+  });
+  document.getElementById('my-roster').innerHTML = html;
+
+  // Needs
+  let needsHtml = '';
+  const posNeedOrder = ['QB','RB','WR','TE','FLEX','K','DST'];
+  posNeedOrder.forEach(pos => {
+    if (needs[pos] > 0) {
+      needsHtml += `<div class="need-item ${needs[pos] > 0 ? 'urgent' : ''}">
+        <span>${pos}</span><span>${needs[pos]} needed</span>
+      </div>`;
+    }
+  });
+  if (!needsHtml) needsHtml = '<div class="need-item" style="color:var(--green);">All starters filled</div>';
+  document.getElementById('my-needs').innerHTML = needsHtml;
+
+  // Budget bar
+  const spent = BUDGET - myTeam.budget;
+  const slotsLeft = TOTAL_SLOTS - myTeam.players.length;
+  const reserved = Math.max(0, slotsLeft - 1);
+  const free = Math.max(0, myTeam.budget - reserved);
+  document.getElementById('budget-breakdown').innerHTML =
+    `Spent: $${spent} | Reserved: $${reserved} (${slotsLeft - 1} slots x $1) | Spendable: $${free}`;
+  document.getElementById('budget-visual').innerHTML = `
+    <div class="budget-spent" style="width:${(spent/BUDGET)*100}%"></div>
+    <div class="budget-reserved" style="width:${(reserved/BUDGET)*100}%"></div>
+    <div class="budget-free" style="width:${(free/BUDGET)*100}%"></div>
+  `;
+
+  // Allocation advice
+  document.getElementById('allocation-advice').innerHTML = `
+    <div class="strategy-title">Strategy</div>
+    <div class="strategy-text">${getAllocationAdvice()}</div>
+  `;
+}
+
+function renderBoard() {
+  const search = document.getElementById('search').value.toLowerCase();
+  const tbody = document.getElementById('player-tbody');
+  let players = [...PLAYERS];
+
+  // Filter
+  if (state.posFilter !== 'ALL') players = players.filter(p => p.pos === state.posFilter);
+  if (search) players = players.filter(p =>
+    p.name.toLowerCase().includes(search) || p.team.toLowerCase().includes(search)
+  );
+  if (state.showAvailOnly) players = players.filter(p => !isDrafted(p.id));
+  if (state.showTargetsOnly) players = players.filter(p => state.targets.has(p.id));
+
+  // Sort
+  const sf = state.sortField;
+  const sd = state.sortDir;
+  players.sort((a, b) => {
+    let va, vb;
+    switch(sf) {
+      case 'rank': va = a.val; vb = b.val; return (vb - va) * sd;
+      case 'name': return a.name.localeCompare(b.name) * sd;
+      case 'pos': return a.pos.localeCompare(b.pos) * sd || (b.val - a.val);
+      case 'team': return a.team.localeCompare(b.team) * sd;
+      case 'bye': return (a.bye - b.bye) * sd;
+      case 'val': return (b.val - a.val) * sd;
+      case 'adj': return (getAdjustedValue(b) - getAdjustedValue(a)) * sd;
+      case 'pts': return (b.pts - a.pts) * sd;
+      case 'tier': return (a.tier - b.tier) * sd || (b.val - a.val);
+      default: return (b.val - a.val) * sd;
+    }
+  });
+
+  let html = '';
+  players.forEach((p, idx) => {
+    const drafted = isDrafted(p.id);
+    const draftedMine = isDraftedByMe(p.id);
+    const isTarget = state.targets.has(p.id);
+    const isAvoid = state.avoids.has(p.id);
+    const adjVal = getAdjustedValue(p);
+    const valDiff = adjVal - p.val;
+    const valClass = valDiff > 2 ? 'val-up' : valDiff < -2 ? 'val-down' : 'val-neutral';
+
+    let rowClass = '';
+    if (draftedMine) rowClass = 'drafted-mine';
+    else if (drafted) rowClass = 'drafted';
+    else if (isTarget) rowClass = 'target';
+    else if (isAvoid) rowClass = 'avoid';
+
+    const pick = drafted ? state.picks.find(pk => pk.player.id === p.id) : null;
+
+    html += `<tr class="${rowClass}">
+      <td>
+        <button class="mark-btn ${isTarget ? 'marked' : ''}" onclick="toggleTarget(${p.id})" title="Toggle target">
+          ${isTarget ? '&#9733;' : '&#9734;'}
+        </button>
+      </td>
+      <td style="color:var(--dim);">${idx + 1}</td>
+      <td style="font-weight:bold;">${p.name}</td>
+      <td><span class="pos-badge pos-${p.pos}">${p.pos}</span></td>
+      <td style="color:var(--muted);">${p.team}</td>
+      <td style="color:var(--dim);">${p.bye}</td>
+      <td class="val-cell">$${p.val}</td>
+      <td class="val-cell ${valClass}">$${adjVal}</td>
+      <td style="color:var(--muted);">${p.pts}</td>
+      <td><span class="tier-badge tier-${p.tier}">${p.tier}</span></td>
+      <td>
+        ${drafted ?
+          (pick ? `<span style="font-size:9px;color:var(--muted);">${state.teams[pick.teamId].name} $${pick.price}</span>` : 'GONE') :
+          `<button class="draft-btn" onclick="openDraftModal(${p.id})">Draft</button>`
+        }
+      </td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function renderLeague() {
+  const container = document.getElementById('league-teams');
+  let html = '';
+  state.teams.forEach(team => {
+    const grade = calcDraftGrade(team);
+    const filled = team.players.length;
+    const isMe = team.id === state.myTeamId;
+    const gradeClass = grade.grade.startsWith('A') ? 'grade-A' :
+                       grade.grade.startsWith('B') ? 'grade-B' :
+                       grade.grade.startsWith('C') ? 'grade-C' :
+                       grade.grade.startsWith('D') ? 'grade-D' : '';
+
+    html += `<div class="team-card ${isMe ? 'my-team' : ''}" onclick="showTeamDetail(${team.id})">
+      <div class="team-card-header">
+        <span class="team-name">${isMe ? '>> ' : ''}${team.name}</span>
+        <span class="team-budget">$${team.budget}</span>
+      </div>
+      <div class="team-meta">
+        <span>${filled}/${TOTAL_SLOTS} filled | $/slot: $${getPerSlot(team)} | max: $${getMaxBid(team)}</span>
+        <span class="team-grade ${gradeClass}">${grade.grade}</span>
+      </div>
+    </div>`;
+  });
+  container.innerHTML = html;
+
+  // Inflation
+  const inf = calcInflation();
+  const infEl = document.getElementById('inflation-value');
+  const infDescEl = document.getElementById('inflation-desc');
+  infEl.textContent = `${inf.toFixed(2)}x`;
+  if (state.pickNumber === 0) {
+    infEl.style.color = 'var(--accent)';
+    infDescEl.textContent = 'Draft starting. Adj values = expected prices.';
+  } else if (inf > 1.15) {
+    infEl.style.color = 'var(--danger)';
+    infDescEl.textContent = 'Inflation: money flooding the market. Let others overpay.';
+  } else if (inf > 0.9) {
+    infEl.style.color = 'var(--accent)';
+    infDescEl.textContent = 'Neutral market. Fair prices available.';
+  } else {
+    infEl.style.color = 'var(--green)';
+    infDescEl.textContent = 'Deflation: budgets drying up. BUY NOW - bargains ahead.';
+  }
+}
+
+function renderStrategy() {
+  const bar = document.getElementById('strategy-bar');
+  const nomTeamId = state.nominationOrder[state.currentNomIdx];
+  const isMyTurn = nomTeamId === state.myTeamId;
+  const suggestions = getNominationSuggestions();
+  const myNeeds = getTeamNeeds(state.teams[state.myTeamId]);
+
+  let html = '';
+
+  // Nomination suggestions
+  html += `<div class="strat-section">
+    <div class="strat-title">${isMyTurn ? 'YOUR NOMINATION - PICK ONE' : 'Next Nomination Ideas'}</div>`;
+  if (suggestions.length === 0) {
+    html += '<div style="font-size:10px;color:var(--muted);">No suggestions yet</div>';
+  }
+  suggestions.slice(0, 5).forEach(s => {
+    const tagClass = s.type === 'drain' ? 'tag-drain' : s.type === 'target' ? 'tag-target' :
+                     s.type === 'chaos' ? 'tag-chaos' : s.type === 'run' ? 'tag-run' : 'tag-value';
+    html += `<div class="strat-item" onclick="openDraftModal(${s.player.id})">
+      <span class="strat-tag ${tagClass}">${s.tag}</span>
+      <span style="font-weight:bold;">${s.player.name}</span>
+      <span style="color:var(--muted);">$${getAdjustedValue(s.player)}</span>
+      <span style="color:var(--dim);font-size:9px;">${s.reason}</span>
+    </div>`;
+  });
+  html += '</div>';
+
+  // Best available by need
+  html += `<div class="strat-section"><div class="strat-title">Best Available by Need</div>`;
+  const needPositions = ['RB','WR','QB','TE'].filter(p => {
+    if (p === 'QB') return myNeeds.QB > 0;
+    if (p === 'TE') return myNeeds.TE > 0;
+    return myNeeds[p] > 0 || myNeeds.FLEX > 0;
+  });
+  if (needPositions.length === 0) needPositions.push('RB','WR');
+  needPositions.forEach(pos => {
+    const best = getBestAvailable(pos).slice(0, 2);
+    best.forEach(p => {
+      html += `<div class="strat-item" onclick="openDraftModal(${p.id})">
+        <span class="pos-badge pos-${p.pos}" style="font-size:8px;">${p.pos}</span>
+        <span>${p.name}</span>
+        <span style="color:var(--accent);">$${p.adjVal}</span>
+      </div>`;
+    });
+  });
+  html += '</div>';
+
+  // Value picks (biggest discount from base)
+  html += `<div class="strat-section"><div class="strat-title">Value Picks (Adj &gt; Base)</div>`;
+  const valuePicks = getAvailablePlayers()
+    .map(p => ({...p, adjVal: getAdjustedValue(p), diff: getAdjustedValue(p) - p.val}))
+    .filter(p => p.diff > 0 && p.val > 1)
+    .sort((a, b) => b.diff - a.diff)
+    .slice(0, 5);
+  valuePicks.forEach(p => {
+    html += `<div class="strat-item" onclick="openDraftModal(${p.id})">
+      <span class="strat-tag tag-value">+$${p.diff}</span>
+      <span>${p.name}</span>
+      <span style="color:var(--muted);">base $${p.val} adj $${p.adjVal}</span>
+    </div>`;
+  });
+  html += '</div>';
+
+  bar.innerHTML = html;
+}
+
+// ===========================
+// UI HELPERS
+// ===========================
+function setFilter(pos, el) {
+  state.posFilter = pos;
+  document.querySelectorAll('.pos-btn[data-pos]').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderBoard();
+}
+
+function sortBy(field) {
+  if (state.sortField === field) state.sortDir *= -1;
+  else { state.sortField = field; state.sortDir = 1; }
+  document.querySelectorAll('.player-table th').forEach(th => th.classList.remove('sorted'));
+  const thId = `th-${field}`;
+  const th = document.getElementById(thId);
+  if (th) th.classList.add('sorted');
+  renderBoard();
+}
+
+function toggleAvailOnly() {
+  state.showAvailOnly = !state.showAvailOnly;
+  document.getElementById('avail-toggle').classList.toggle('active', state.showAvailOnly);
+  renderBoard();
+}
+
+function toggleTargets() {
+  state.showTargetsOnly = !state.showTargetsOnly;
+  document.getElementById('target-toggle').classList.toggle('active', state.showTargetsOnly);
+  renderBoard();
+}
+
+function toggleTarget(pid) {
+  if (state.targets.has(pid)) state.targets.delete(pid);
+  else state.targets.add(pid);
+  renderBoard();
+  autoSave();
+}
+
+function showTeamDetail(teamId) {
+  const team = state.teams[teamId];
+  const roster = getTeamRoster(team);
+  const grade = calcDraftGrade(team);
+  const needs = getTeamNeeds(team);
+
+  document.getElementById('team-detail-title').textContent = team.name;
+
+  let html = `
+    <div style="display:flex;gap:20px;margin-bottom:12px;font-size:12px;">
+      <div>Budget: <b style="color:var(--green);">$${team.budget}</b></div>
+      <div>Filled: <b>${team.players.length}/${TOTAL_SLOTS}</b></div>
+      <div>Grade: <b class="${grade.grade.startsWith('A') ? 'grade-A' : grade.grade.startsWith('B') ? 'grade-B' : 'grade-C'}">${grade.grade}</b></div>
+      <div>Max Bid: <b>$${getMaxBid(team)}</b></div>
+      <div>$/Slot: <b>$${getPerSlot(team)}</b></div>
+    </div>
+    <div style="margin-bottom:8px;font-size:10px;color:var(--muted);">ROSTER</div>
+  `;
+
+  const slotOrder = ['QB','RB','WR','TE','FLEX','K','DST','BN'];
+  slotOrder.forEach(slot => {
+    const players = roster[slot];
+    if (players.length > 0) {
+      players.forEach(p => {
+        html += `<div style="display:flex;justify-content:space-between;padding:3px 6px;font-size:11px;border-bottom:1px solid var(--border);">
+          <span><span style="color:var(--muted);min-width:30px;display:inline-block;">${slot}</span> ${p.player.name} <span style="color:var(--dim);">${p.player.team}</span></span>
+          <span style="color:var(--green);">$${p.price}</span>
+        </div>`;
+      });
+    }
+  });
+
+  html += `<div style="margin-top:10px;font-size:10px;color:var(--muted);">NEEDS</div>`;
+  const posOrder = ['QB','RB','WR','TE','FLEX','K','DST'];
+  posOrder.forEach(pos => {
+    if (needs[pos] > 0) {
+      html += `<div style="font-size:10px;padding:2px 6px;color:var(--warn);">${pos}: ${needs[pos]} needed</div>`;
+    }
+  });
+
+  document.getElementById('team-detail-content').innerHTML = html;
+  document.getElementById('team-detail-modal').classList.add('active');
+}
+
+function closeTeamDetail() {
+  document.getElementById('team-detail-modal').classList.remove('active');
+}
+
+// ===========================
+// SETTINGS
+// ===========================
+function openSettings() {
+  document.getElementById('set-my-team').value = state.myTeamId + 1;
+  const grid = document.getElementById('team-names-grid');
+  grid.innerHTML = state.teams.map(t =>
+    `<input type="text" value="${t.name}" data-team-id="${t.id}" placeholder="Team ${t.id + 1}">`
+  ).join('');
+  document.getElementById('set-nom-order').value = state.nominationOrder.map(i => i + 1).join(',');
+  document.getElementById('settings-modal').classList.add('active');
+}
+
+function closeSettings() {
+  document.getElementById('settings-modal').classList.remove('active');
+}
+
+function applySettings() {
+  state.myTeamId = parseInt(document.getElementById('set-my-team').value) - 1;
+  document.querySelectorAll('#team-names-grid input').forEach(inp => {
+    const tid = parseInt(inp.dataset.teamId);
+    state.teams[tid].name = inp.value || `Team ${tid + 1}`;
+  });
+  const nomStr = document.getElementById('set-nom-order').value;
+  state.nominationOrder = nomStr.split(',').map(s => parseInt(s.trim()) - 1).filter(n => !isNaN(n) && n >= 0 && n < 10);
+  if (state.nominationOrder.length === 0) state.nominationOrder = [0,1,2,3,4,5,6,7,8,9];
+
+  closeSettings();
+  renderAll();
+  autoSave();
+  toast('Settings applied', 'success');
+}
+
+// ===========================
+// PERSISTENCE
+// ===========================
+function saveState() {
+  const data = {
+    myTeamId: state.myTeamId,
+    teams: state.teams,
+    picks: state.picks,
+    targets: [...state.targets],
+    avoids: [...state.avoids],
+    nominationOrder: state.nominationOrder,
+    currentNomIdx: state.currentNomIdx,
+    pickNumber: state.pickNumber
+  };
+  localStorage.setItem('ff-auction-2026', JSON.stringify(data));
+  toast('Draft saved', 'success');
+}
+
+function loadState() {
+  const raw = localStorage.getItem('ff-auction-2026');
+  if (!raw) { toast('No saved draft found', 'warn'); return; }
+  try {
+    const data = JSON.parse(raw);
+    state.myTeamId = data.myTeamId;
+    state.teams = data.teams;
+    state.picks = data.picks;
+    state.targets = new Set(data.targets || []);
+    state.avoids = new Set(data.avoids || []);
+    state.nominationOrder = data.nominationOrder;
+    state.currentNomIdx = data.currentNomIdx;
+    state.pickNumber = data.pickNumber;
+    renderAll();
+    toast('Draft loaded', 'success');
+  } catch(e) {
+    toast('Error loading draft', 'danger');
+  }
+}
+
+function autoSave() {
+  const data = {
+    myTeamId: state.myTeamId,
+    teams: state.teams,
+    picks: state.picks,
+    targets: [...state.targets],
+    avoids: [...state.avoids],
+    nominationOrder: state.nominationOrder,
+    currentNomIdx: state.currentNomIdx,
+    pickNumber: state.pickNumber
+  };
+  localStorage.setItem('ff-auction-2026', JSON.stringify(data));
+}
+
+function resetDraft() {
+  if (!confirm('Reset entire draft? This cannot be undone.')) return;
+  initTeams();
+  state.picks = [];
+  state.pickNumber = 0;
+  state.currentNomIdx = 0;
+  state.targets = new Set();
+  state.avoids = new Set();
+  localStorage.removeItem('ff-auction-2026');
+  renderAll();
+  toast('Draft reset', 'warn');
+}
+
+// ===========================
+// TOAST
+// ===========================
+function toast(msg, type = 'info') {
+  const container = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.style.borderColor = type === 'success' ? 'var(--green)' :
+                         type === 'danger' ? 'var(--danger)' :
+                         type === 'warn' ? 'var(--warn)' : 'var(--blue)';
+  t.textContent = msg;
+  container.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ===========================
+// EVENT LISTENERS
+// ===========================
+document.getElementById('draft-price').addEventListener('input', updateWhatIf);
+document.getElementById('draft-team-select').addEventListener('change', updateWhatIf);
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeDraftModal();
+    closeSettings();
+    closeTeamDetail();
+  }
+});
+
+// ===========================
+// INIT
+// ===========================
+function init() {
+  const saved = localStorage.getItem('ff-auction-2026');
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      state.myTeamId = data.myTeamId;
+      state.teams = data.teams;
+      state.picks = data.picks;
+      state.targets = new Set(data.targets || []);
+      state.avoids = new Set(data.avoids || []);
+      state.nominationOrder = data.nominationOrder;
+      state.currentNomIdx = data.currentNomIdx;
+      state.pickNumber = data.pickNumber;
+    } catch(e) {
+      initTeams();
+    }
+  } else {
+    initTeams();
+  }
+  renderAll();
+}
+
+init();
+</script>
+</body>
+</html>
