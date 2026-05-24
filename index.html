@@ -690,10 +690,111 @@ input, select, button, textarea { font-family: inherit; }
 .section-body { transition: max-height .25s ease; overflow: hidden; }
 .section-body.collapsed { max-height: 0 !important; overflow: hidden; }
 
-/* Responsive */
-@media (max-width: 900px) {
-  .app { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr auto auto; }
-  .my-team-panel, .league-panel { max-height: 200px; }
+/* Mobile Nav */
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 6px 0 env(safe-area-inset-bottom, 4px);
+}
+.mobile-nav-inner {
+  display: flex;
+  justify-content: space-around;
+}
+.mob-tab {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 9px;
+  font-family: inherit;
+  padding: 4px 8px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+.mob-tab.active { color: var(--gold); }
+
+/* Responsive - iPhone */
+@media (max-width: 600px) {
+  body { height: 100vh; height: 100dvh; overflow: hidden; }
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    height: 100vh;
+    height: 100dvh;
+  }
+  .header {
+    padding: 6px 10px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .header h1 { font-size: 11px; letter-spacing: 1px; }
+  .header-stats { gap: 10px; order: 2; width: 100%; justify-content: space-around; }
+  .stat-label { font-size: 7px; }
+  .stat-value { font-size: 14px; }
+  .header-actions { order: 1; margin-left: auto; gap: 4px; }
+  .header-actions .btn { padding: 4px 8px; font-size: 9px; }
+  .header-actions .splash-toggle { display: none; }
+
+  .my-team-panel,
+  .player-board,
+  .league-panel {
+    grid-column: 1;
+    grid-row: 2;
+    overflow-y: auto;
+    display: none !important;
+  }
+  .my-team-panel.mob-active { display: block !important; }
+  .player-board.mob-active { display: flex !important; }
+  .league-panel.mob-active { display: block !important; }
+
+  .mobile-nav { display: block; }
+
+  .board-controls { padding: 4px 6px; gap: 4px; }
+  .search-box { min-width: 80px; font-size: 11px; padding: 5px 8px; }
+  .pos-filters { flex-wrap: wrap; gap: 2px; }
+  .pos-btn { padding: 3px 7px; font-size: 9px; }
+  .view-toggle .btn { padding: 3px 6px; font-size: 9px; }
+
+  .player-table { font-size: 10px; }
+  .player-table th { font-size: 7px; padding: 4px 4px; }
+  .player-table td { padding: 4px 4px; }
+  .player-table td:nth-child(5),
+  .player-table th:nth-child(5),
+  .player-table td:nth-child(6),
+  .player-table th:nth-child(6),
+  .player-table td:nth-child(8),
+  .player-table th:nth-child(8) { display: none; }
+  .draft-btn { padding: 2px 5px; font-size: 8px; }
+
+  .bid-tracker { flex-wrap: wrap; padding: 6px 8px; gap: 6px; }
+  .bt-inc-group { flex-wrap: wrap; gap: 2px; }
+  .bt-inc { padding: 2px 5px; font-size: 8px; }
+  .bid-tracker-input { width: 55px; font-size: 12px; }
+  .bid-meter { width: 100%; order: 10; }
+  .bid-verdict { width: 100%; order: 11; }
+
+  .panel-title { font-size: 9px; }
+  .roster-slot { font-size: 10px; padding: 3px 4px; min-height: 26px; }
+  .team-card { padding: 6px 8px; }
+  .team-name { font-size: 10px; }
+
+  .player-board { padding-bottom: 52px; }
+  .my-team-panel { padding-bottom: 52px; }
+  .league-panel { padding-bottom: 52px; }
+
+  .splash-title { font-size: 18px; letter-spacing: 3px; }
+  .splash-img { max-height: 55vh; max-width: 60vw; }
+
+  /* Draft modal */
+  .modal-content { width: 95vw !important; max-width: 95vw !important; padding: 12px !important; }
+  .modal-content h2 { font-size: 14px; }
 }
 </style>
 </head>
@@ -742,6 +843,13 @@ input, select, button, textarea { font-family: inherit; }
   </div>
 
   <!-- LEFT: MY TEAM -->
+  <div class="mobile-nav" id="mobile-nav">
+    <div class="mobile-nav-inner">
+      <button class="mob-tab" onclick="mobSwitch('team')">My Team</button>
+      <button class="mob-tab active" onclick="mobSwitch('board')">Board</button>
+      <button class="mob-tab" onclick="mobSwitch('league')">League</button>
+    </div>
+  </div>
   <div class="my-team-panel" id="my-team-panel">
     <div class="section-header" onclick="toggleSection(this)">
       <div class="panel-title">Wildcard</div>
@@ -779,7 +887,7 @@ input, select, button, textarea { font-family: inherit; }
   </div>
 
   <!-- CENTER: PLAYER BOARD -->
-  <div class="player-board">
+  <div class="player-board mob-active" id="player-board">
     <div class="board-controls">
       <input type="text" class="search-box" id="search" placeholder="Search players..." oninput="renderBoard()">
       <div class="pos-filters">
@@ -2448,6 +2556,19 @@ function openBidTracker(playerId) {
   document.getElementById('bid-tracker').classList.add('active');
   document.getElementById('bt-bid').focus();
   updateBidTracker();
+}
+
+function mobSwitch(tab) {
+  const panels = {
+    team: document.getElementById('my-team-panel'),
+    board: document.getElementById('player-board'),
+    league: document.getElementById('league-panel')
+  };
+  Object.values(panels).forEach(p => p.classList.remove('mob-active'));
+  panels[tab].classList.add('mob-active');
+  document.querySelectorAll('.mob-tab').forEach((btn, i) => {
+    btn.classList.toggle('active', ['team','board','league'][i] === tab);
+  });
 }
 
 function dismissSplash() {
