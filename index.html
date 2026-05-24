@@ -21,8 +21,8 @@
   --blue: #5b8dbf;
   --purple: #7e6cb5;
   --text: #c8cbd0;
-  --muted: #555a65;
-  --dim: #2a2a35;
+  --muted: #8a8f9a;
+  --dim: #505565;
   --green: #4a9;
   --red: #b54;
   --espn-red: #c0392b;
@@ -924,7 +924,8 @@ input, select, button, textarea { font-family: inherit; }
     <div class="bid-tracker" id="bid-tracker">
       <div class="bid-tracker-player" id="bt-player"></div>
       <span style="color:var(--dim);">Bid:</span>
-      <input type="number" class="bid-tracker-input" id="bt-bid" min="0" max="200" value="1" oninput="updateBidTracker()">
+      <input type="number" class="bid-tracker-input" id="bt-bid" min="0" max="200" value="0" oninput="updateBidTracker()">
+      <span id="bt-fair" style="color:var(--blue);font-size:10px;font-weight:600;white-space:nowrap;"></span>
       <div class="bt-inc-group">
         <button class="bt-inc" onclick="adjBid(1)">+$1</button>
         <button class="bt-inc" onclick="adjBid(2)">+$2</button>
@@ -2580,7 +2581,8 @@ function openBidTracker(playerId) {
     `<span class="pos-badge pos-${player.pos}">${player.pos}</span>` +
     `<span class="bt-name">${player.name}</span>` +
     `<span style="color:var(--dim);font-size:10px;">${player.team}</span>`;
-  document.getElementById('bt-bid').value = adjVal;
+  document.getElementById('bt-bid').value = 0;
+  document.getElementById('bt-fair').textContent = 'FV: $' + adjVal;
   document.getElementById('bid-tracker').classList.add('active');
   document.getElementById('bt-bid').focus();
   updateBidTracker();
@@ -2621,7 +2623,7 @@ function adjBid(amount) {
 function resetBid() {
   if (!bidTrackerId) return;
   const player = PLAYERS.find(p => p.id === bidTrackerId);
-  document.getElementById('bt-bid').value = player ? getAdjustedValue(player) : 1;
+  document.getElementById('bt-bid').value = 0;
   updateBidTracker();
 }
 
@@ -2632,6 +2634,7 @@ function updateBidTracker() {
 
   const bid = parseInt(document.getElementById('bt-bid').value) || 0;
   const adjVal = getAdjustedValue(player);
+  document.getElementById('bt-fair').textContent = 'FV: $' + adjVal;
   const baseVal = player.val;
   const myTeam = state.teams[state.myTeamId];
   const myNeeds = getTeamNeeds(myTeam);
