@@ -806,19 +806,39 @@ input, select, button, textarea { font-family: inherit; }
     height: 100dvh;
   }
 
-  /* Header: compact two-row layout */
+  /* Header: compact single bar */
   .header {
-    padding: 4px 8px;
-    gap: 4px;
+    padding: 6px 10px;
+    gap: 0;
     flex-wrap: wrap;
+    justify-content: space-between;
+    position: relative;
   }
-  .header h1 { font-size: 10px; letter-spacing: 1px; }
-  .header-stats { gap: 6px; order: 2; width: 100%; justify-content: space-between; padding: 2px 0; }
-  .stat-label { font-size: 6px; }
-  .stat-value { font-size: 12px; }
-  .header-actions { order: 1; margin-left: auto; gap: 2px; flex-wrap: wrap; }
-  .header-actions .btn { padding: 3px 6px; font-size: 8px; }
+  .header h1 { display: none; }
+  .header-stats {
+    order: 1;
+    width: 100%;
+    gap: 2px;
+    justify-content: space-between;
+    padding: 0;
+  }
+  .stat { flex: 1; min-width: 0; }
+  .stat-label { font-size: 7px; letter-spacing: 0.5px; }
+  .stat-value { font-size: 14px; }
+  .header-actions {
+    order: 2;
+    width: 100%;
+    gap: 4px;
+    justify-content: center;
+    padding-top: 4px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .header-actions .btn { padding: 6px 10px; font-size: 10px; white-space: nowrap; min-height: 32px; }
   .header-actions .splash-toggle { display: none; }
+
+  /* Mock banner */
+  .mock-banner { font-size: 11px; padding: 5px 10px; }
 
   /* Panel switching */
   .my-team-panel,
@@ -828,25 +848,59 @@ input, select, button, textarea { font-family: inherit; }
     grid-row: 2;
     overflow-y: auto;
     display: none !important;
+    border-right: none;
+    border-left: none;
   }
   .my-team-panel.mob-active { display: block !important; }
   .player-board.mob-active { display: flex !important; }
   .league-panel.mob-active { display: block !important; }
 
+  /* Strategy panel on mobile */
+  .strategy-mobile { display: none !important; overflow-y: auto; padding: 12px; }
+  .strategy-mobile.mob-active { display: block !important; }
+
+  /* Bottom strategy bar hidden on mobile - we use the tab instead */
+  .app > div:last-child { display: none !important; }
+
+  /* Bottom nav */
   .mobile-nav { display: block; }
+  .mobile-nav-inner { padding: 2px 4px; }
+  .mob-tab {
+    font-size: 11px;
+    padding: 10px 6px 8px;
+    letter-spacing: 0.3px;
+    position: relative;
+  }
+  .mob-tab.active {
+    color: var(--espn-red);
+    font-weight: 700;
+  }
+  .mob-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 20%;
+    right: 20%;
+    height: 2px;
+    background: var(--espn-red);
+    border-radius: 1px;
+  }
 
-  /* Board controls */
-  .board-controls { padding: 4px 6px; gap: 3px; }
-  .search-box { min-width: 0; flex: 1; font-size: 11px; padding: 5px 8px; }
-  .pos-filters { flex-wrap: wrap; gap: 2px; }
-  .pos-btn { padding: 3px 6px; font-size: 8px; }
-  .view-toggle .btn { padding: 3px 6px; font-size: 8px; }
+  /* Board controls: touch-friendly */
+  .board-controls { padding: 6px 8px; gap: 6px; }
+  .search-box { min-width: 0; flex: 1; font-size: 14px; padding: 8px 10px; border-radius: 8px; }
+  .pos-filters { gap: 3px; flex-wrap: nowrap; overflow-x: auto; width: 100%; }
+  .pos-btn { padding: 7px 10px; font-size: 11px; border-radius: 6px; min-height: 32px; white-space: nowrap; }
+  .view-toggle { gap: 3px; }
+  .view-toggle .pos-btn { padding: 7px 10px; font-size: 11px; min-height: 32px; }
 
-  /* Player table: aggressive column hiding for portrait */
-  .player-table { font-size: 10px; }
-  .player-table th { font-size: 7px; padding: 3px 2px; white-space: nowrap; }
-  .player-table td { padding: 3px 2px; }
-  /* Hide: star, team, bye, value, pts, advice */
+  /* Player table: card-like rows */
+  .player-table { font-size: 12px; }
+  .player-table th { font-size: 8px; padding: 6px 4px; white-space: nowrap; }
+  .player-table td { padding: 8px 4px; }
+  .player-table tr { border-bottom: 1px solid var(--border); }
+  .player-table tr:active { background: rgba(0,0,0,0.06); }
+  /* Hide: star, pos-rank, team, bye, value, pts, advice */
   .player-table td:nth-child(1),
   .player-table th:nth-child(1),
   .player-table td:nth-child(5),
@@ -855,47 +909,104 @@ input, select, button, textarea { font-family: inherit; }
   .player-table th:nth-child(6),
   .player-table td:nth-child(7),
   .player-table th:nth-child(7),
-  .player-table td:nth-child(9),
-  .player-table th:nth-child(9),
+  .player-table td:nth-child(8),
+  .player-table th:nth-child(8),
+  .player-table td:nth-child(10),
+  .player-table th:nth-child(10),
   .player-table td:nth-child(11),
   .player-table th:nth-child(11) { display: none; }
-  .player-table td:nth-child(3) { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .draft-btn { padding: 2px 5px; font-size: 8px; }
+  /* Visible: OVR(2), Name(3), Pos(4), Adj$(9), Action(12) */
+  .player-table td:nth-child(2) { font-size: 11px; color: var(--dim); min-width: 22px; }
+  .player-table td:nth-child(3) { font-size: 13px; font-weight: 600; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .player-table td:nth-child(9) { font-size: 14px; }
+  .draft-btn { padding: 6px 10px; font-size: 11px; border-radius: 6px; min-height: 34px; font-weight: 700; }
+  .advice-badge { font-size: 9px; padding: 2px 6px; }
 
-  /* Bid tracker: stack vertically */
+  /* Bid tracker: full-width stacked */
   .bid-tracker {
     flex-wrap: wrap;
-    padding: 6px 8px;
-    gap: 4px;
+    padding: 8px 10px;
+    gap: 6px;
     align-items: center;
   }
-  .bid-tracker-player { width: 100%; }
-  .bt-inc-group { flex-wrap: wrap; gap: 2px; width: 100%; justify-content: space-between; }
-  .bt-inc { padding: 4px 8px; font-size: 9px; flex: 1; text-align: center; }
-  .bid-tracker-input { width: 50px; font-size: 13px; }
-  .bid-meter { width: 100%; order: 10; }
-  .bid-verdict { width: 100%; order: 11; }
+  .bid-tracker-player { width: 100%; font-size: 13px; }
+  .bt-inc-group { flex-wrap: wrap; gap: 4px; width: 100%; justify-content: space-between; }
+  .bt-inc { padding: 8px 10px; font-size: 12px; flex: 1; text-align: center; min-height: 36px; border-radius: 6px; }
+  .bid-tracker-input { width: 60px; font-size: 16px; padding: 6px; }
+  .bid-meter { width: 100%; order: 10; height: 8px; }
+  .bid-verdict { width: 100%; order: 11; font-size: 11px; }
 
-  /* Side panels */
-  .panel-title { font-size: 9px; }
-  .roster-slot { font-size: 10px; padding: 3px 4px; min-height: 26px; }
-  .team-card { padding: 6px 8px; }
-  .team-name { font-size: 10px; }
-  .team-meta { font-size: 8px; }
+  /* Section headers: larger tap targets */
+  .section-header { padding: 12px 12px; min-height: 44px; margin-bottom: 2px; }
+  .section-header .panel-title { font-size: 12px; letter-spacing: 1.5px; }
+  .section-toggle { font-size: 12px; }
 
-  .player-board { padding-bottom: 52px; }
-  .my-team-panel { padding-bottom: 52px; }
-  .league-panel { padding-bottom: 52px; }
+  /* Side panels: touch-friendly */
+  .my-team-panel { padding: 8px; }
+  .panel-title { font-size: 10px; }
+  .roster-slot { font-size: 12px; padding: 6px 8px; min-height: 36px; gap: 8px; }
+  .slot-pos { font-size: 11px; min-width: 36px; }
+  .slot-player { font-size: 12px; }
+  .slot-price { font-size: 13px; }
+  .slot-empty-text { font-size: 11px; }
+  .need-item { font-size: 12px; padding: 6px 8px; min-height: 32px; align-items: center; }
+
+  /* League panel */
+  .league-panel { padding: 8px; }
+  .team-card { padding: 10px 12px; margin-bottom: 4px; border-radius: 8px; min-height: 44px; }
+  .team-name { font-size: 13px; }
+  .team-budget { font-size: 16px; }
+  .team-meta { font-size: 10px; }
+  .team-grade { font-size: 14px; }
+  .team-logo { width: 32px; height: 32px; }
+
+  /* Wishlist items */
+  .wish-item { padding: 8px; min-height: 40px; font-size: 12px; border-radius: 6px; }
+  .wish-name { font-size: 13px; }
+  .wish-val { font-size: 13px; }
+
+  /* Bottom padding for nav */
+  .player-board { padding-bottom: 60px; }
+  .my-team-panel { padding-bottom: 60px; }
+  .league-panel { padding-bottom: 60px; }
+  .strategy-mobile { padding-bottom: 60px; }
 
   /* Splash */
   .splash-title { font-size: 24px; letter-spacing: 3px; }
   .splash-img { max-height: 50vh; max-width: 80vw; }
 
-  /* Draft modal */
-  .modal-content { width: 95vw !important; max-width: 95vw !important; padding: 12px !important; }
-  .modal-content h2 { font-size: 14px; }
-  .modal-field label { font-size: 9px; }
-  .modal-field select, .modal-field input { font-size: 13px; padding: 6px; }
+  /* Draft modal: near full-screen */
+  .modal-overlay { align-items: flex-end; }
+  .modal-content {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    padding: 16px !important;
+    border-radius: 16px 16px 0 0 !important;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .modal-content h2 { font-size: 16px; }
+  .modal-field label { font-size: 11px; }
+  .modal-field select, .modal-field input { font-size: 16px; padding: 10px; border-radius: 8px; min-height: 44px; }
+  .modal-actions { gap: 8px; padding-top: 8px; }
+  .modal-actions .btn { padding: 12px 20px; font-size: 14px; border-radius: 8px; min-height: 48px; flex: 1; }
+  .modal-info { font-size: 12px; gap: 12px; }
+
+  /* Mock recap */
+  .mock-recap { padding: 16px; max-width: 100vw; width: 100vw; border-radius: 16px 16px 0 0; }
+  .mock-recap-overlay { align-items: flex-end; }
+  .recap-close { padding: 14px; font-size: 14px; border-radius: 10px; min-height: 48px; }
+
+  /* Inflation box */
+  .inflation-value { font-size: 28px; }
+  .inflation-desc { font-size: 12px; }
+
+  /* Strategy items in mobile tab */
+  .strategy-bar { padding: 8px; flex-direction: column; max-height: none; }
+  .strat-section { min-width: 0 !important; flex: none !important; width: 100%; }
+  .strat-item { padding: 10px; margin-bottom: 6px; border-radius: 8px; }
+  .strat-title { font-size: 12px; }
+  .strat-body { font-size: 12px; line-height: 1.5; }
 }
 </style>
 </head>
@@ -951,9 +1062,10 @@ input, select, button, textarea { font-family: inherit; }
   <!-- LEFT: MY TEAM -->
   <div class="mobile-nav" id="mobile-nav">
     <div class="mobile-nav-inner">
-      <button class="mob-tab" onclick="mobSwitch('team')">My Team</button>
       <button class="mob-tab active" onclick="mobSwitch('board')">Board</button>
+      <button class="mob-tab" onclick="mobSwitch('team')">My Team</button>
       <button class="mob-tab" onclick="mobSwitch('league')">League</button>
+      <button class="mob-tab" onclick="mobSwitch('strategy')">Strategy</button>
     </div>
   </div>
   <div class="my-team-panel" id="my-team-panel">
@@ -1071,6 +1183,14 @@ input, select, button, textarea { font-family: inherit; }
         <div class="inflation-desc" id="inflation-desc">Neutral - draft just started</div>
       </div>
     </div>
+  </div>
+
+  <!-- MOBILE STRATEGY PANEL (hidden on desktop) -->
+  <div class="strategy-mobile" id="strategy-mobile" style="display:none;grid-column:1;grid-row:2;background:var(--surface);overflow-y:auto;">
+    <div class="section-header">
+      <div class="panel-title">Strategy</div>
+    </div>
+    <div id="strategy-bar-mobile" class="strategy-bar"></div>
   </div>
 
   <!-- BOTTOM: STRATEGY BAR -->
@@ -2452,6 +2572,8 @@ function renderStrategy() {
   html += '</div>';
 
   bar.innerHTML = html;
+  const mobBar = document.getElementById('strategy-bar-mobile');
+  if (mobBar) mobBar.innerHTML = html;
 }
 
 // ===========================
@@ -2733,15 +2855,18 @@ function openBidTracker(playerId) {
 
 function mobSwitch(tab) {
   const panels = {
-    team: document.getElementById('my-team-panel'),
     board: document.getElementById('player-board'),
-    league: document.getElementById('league-panel')
+    team: document.getElementById('my-team-panel'),
+    league: document.getElementById('league-panel'),
+    strategy: document.getElementById('strategy-mobile')
   };
   Object.values(panels).forEach(p => p.classList.remove('mob-active'));
   panels[tab].classList.add('mob-active');
+  const tabOrder = ['board','team','league','strategy'];
   document.querySelectorAll('.mob-tab').forEach((btn, i) => {
-    btn.classList.toggle('active', ['team','board','league'][i] === tab);
+    btn.classList.toggle('active', tabOrder[i] === tab);
   });
+  if (tab === 'strategy') renderStrategy();
 }
 
 function dismissSplash() {
